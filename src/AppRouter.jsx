@@ -19,15 +19,10 @@ function AppRouter() {
         return <PlanTrader {...moduleProps} />;
       case 'journal':
       case 'notebook':
-        case 'journal':
-case 'notebook':
-  return <Notes {...moduleProps} />;    // ← Use Notes instead of Journal
+        return <Notes {...moduleProps} />;
       case 'trades':
       case 'smart-journal':
-        return <div className="p-8 text-center text-gray-500">
-          <h2 className="text-xl font-semibold mb-2">Smart Journal</h2>
-          <p>Coming Soon</p>
-        </div>;
+        return <SmartJournal {...moduleProps} />;
       case 'performance':
       case 'daily-view':
         return <div className="p-8 text-center text-gray-500">
