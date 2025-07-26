@@ -1,42 +1,53 @@
 import React from 'react';
 import { useTradingState } from './hooks/useTradingState';
 import { Dashboard, PlanTrader, Journal } from './components/views';
-import { DesktopAdapter } from './components/adapters';
+import { DesktopAdapter, MobileAdapter } from './components/adapters';
+import { useIsMobile } from './hooks/useIsMobile';
 
 function TradingJournal() {
   const tradingState = useTradingState();
+  const isMobile = useIsMobile();
 
-  const renderActiveModule = () => {
-    switch (tradingState.activeModule) {
+  const renderActiveModule = (props) => {
+    const moduleProps = { ...tradingState, ...props };
+    
+    switch (props.activeTab || tradingState.activeModule) {
       case 'dashboard':
-        return <Dashboard {...tradingState} />;
+        return <Dashboard {...moduleProps} />;
+      case 'plans':
       case 'plan-trader':
-        return <PlanTrader {...tradingState} />;
+        return <PlanTrader {...moduleProps} />;
+      case 'journal':
       case 'notebook':
-        return <Journal {...tradingState} />;
+        return <Journal {...moduleProps} />;
+      case 'trades':
       case 'smart-journal':
         return <div className="p-8 text-center text-gray-500">
           <h2 className="text-xl font-semibold mb-2">Smart Journal</h2>
           <p>Coming Soon</p>
         </div>;
-      case 'daily-view':
-        return <div className="p-8 text-center text-gray-500">
-          <h2 className="text-xl font-semibold mb-2">Daily View</h2>
-          <p>Coming Soon</p>
-        </div>;
       case 'performance':
+      case 'daily-view':
         return <div className="p-8 text-center text-gray-500">
           <h2 className="text-xl font-semibold mb-2">Performance</h2>
           <p>Coming Soon</p>
         </div>;
       default:
-        return <Dashboard {...tradingState} />;
+        return <Dashboard {...moduleProps} />;
     }
   };
 
+  if (isMobile) {
+    return (
+      <MobileAdapter {...tradingState}>
+        {(props) => renderActiveModule(props)}
+      </MobileAdapter>
+    );
+  }
+
   return (
     <DesktopAdapter {...tradingState}>
-      {() => renderActiveModule()}
+      {() => renderActiveModule(tradingState)}
     </DesktopAdapter>
   );
 }
