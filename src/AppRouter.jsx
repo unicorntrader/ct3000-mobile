@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTradingState } from './hooks/useTradingState';
-import { Dashboard, PlanTrader, Journal } from './components/views';
+import { Dashboard, PlanTrader, SmartJournal, Notes } from './components/views';
 import { DesktopAdapter, MobileAdapter } from './components/adapters';
 import { useIsMobile } from './hooks/useIsMobile';
 
