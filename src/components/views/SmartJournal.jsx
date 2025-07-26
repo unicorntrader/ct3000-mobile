@@ -294,100 +294,209 @@ export const SmartJournal = (props) => {
     );
   }
 
-  // Desktop version (simplified for now)
+  // Desktop version with right side panel
   return (
-    <div className="space-y-6">
-      {/* Desktop Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Smart Journal</h2>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-6 w-6 text-purple-600" />
-            <span className="text-sm text-gray-500">Live Insights (last 50)</span>
+    <div className="flex space-x-6">
+      {/* Main Content */}
+      <div className={`space-y-6 transition-all duration-300 ${selectedTrade ? 'w-2/3' : 'w-full'}`}>
+        {/* Desktop Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Smart Journal</h2>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 text-purple-600" />
+              <span className="text-sm text-gray-500">Live Insights (last 50)</span>
+            </div>
+            <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
+              <Filter className="h-4 w-4" />
+              <span>Filters</span>
+            </button>
           </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
-            <Filter className="h-4 w-4" />
-            <span>Filters</span>
-          </button>
         </div>
-      </div>
 
-      {/* Desktop Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {insights.map((insight, index) => (
-          <div
-            key={index}
-            className={`p-4 rounded-lg flex items-center space-x-3 ${
-              insight.type === 'positive' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-            }`}
-          >
-            {insight.type === 'positive' ? (
-              <div className="text-green-600">✅</div>
-            ) : (
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-            )}
-            <p className={`${insight.type === 'positive' ? 'text-green-800' : 'text-red-800'}`}>
-              {insight.message}
-            </p>
-          </div>
-        ))}
-      </div>
+        {/* Desktop Insights */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {insights.map((insight, index) => (
+            <div
+              key={index}
+              className={`p-4 rounded-lg flex items-center space-x-3 ${
+                insight.type === 'positive' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+              }`}
+            >
+              {insight.type === 'positive' ? (
+                <div className="text-green-600">✅</div>
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              )}
+              <p className={`${insight.type === 'positive' ? 'text-green-800' : 'text-red-800'}`}>
+                {insight.message}
+              </p>
+            </div>
+          ))}
+        </div>
 
-      {/* Desktop Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy/Tags</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">R</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hold</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outcome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adh.</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTrades.map(trade => (
-                <tr 
-                  key={trade.id} 
-                  onClick={() => openTradeDetail(trade)}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{trade.symbol}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {trade.strategy.map((tag, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.rMultiple}R</td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
-                    trade.outcome === 'win' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {trade.outcome === 'win' ? '+' : ''}${trade.pnl}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.holdTime}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      trade.outcome === 'win' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {trade.outcome}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.adherence}%</td>
+        {/* Desktop Table */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy/Tags</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">R</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hold</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outcome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adh.</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTrades.map(trade => (
+                  <tr 
+                    key={trade.id} 
+                    onClick={() => setSelectedTrade(trade)}
+                    className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                      selectedTrade?.id === trade.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                    }`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{trade.symbol}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {trade.strategy.map((tag, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.rMultiple}R</td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                      trade.outcome === 'win' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {trade.outcome === 'win' ? '+' : ''}${trade.pnl}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.holdTime}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        trade.outcome === 'win' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {trade.outcome}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.adherence}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
+      {/* Right Side Panel */}
+      {selectedTrade && (
+        <div className="w-1/3 bg-white rounded-lg shadow-md p-6 space-y-6 h-fit">
+          {/* Panel Header */}
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Trade {selectedTrade.symbol}</h3>
+            <button 
+              onClick={() => setSelectedTrade(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Trade Overview */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Date:</span>
+                <div className="font-medium">{selectedTrade.date}</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Hold Time:</span>
+                <div className="font-medium">{selectedTrade.holdTime}</div>
+              </div>
+              <div>
+                <span className="text-gray-600">Session:</span>
+                <div className="font-medium">{selectedTrade.timeSession}</div>
+              </div>
+              <div>
+                <span className="text-gray-600">R Multiple:</span>
+                <div className="font-medium">{selectedTrade.rMultiple}R</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Adherence Breakdown */}
+          <div>
+            <h4 className="font-medium mb-3">Adherence Breakdown</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-green-600 text-xl">✅</div>
+                <div className="text-xs text-gray-600 mt-1">Entry</div>
+                <div className="text-sm font-medium">{selectedTrade.adherence}%</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-green-600 text-xl">✅</div>
+                <div className="text-xs text-gray-600 mt-1">Stop</div>
+                <div className="text-sm font-medium">100%</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-green-600 text-xl">✅</div>
+                <div className="text-xs text-gray-600 mt-1">Target</div>
+                <div className="text-sm font-medium">100%</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-green-600 text-xl">✅</div>
+                <div className="text-xs text-gray-600 mt-1">Size</div>
+                <div className="text-sm font-medium">100%</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Plan vs Reality */}
+          <div>
+            <h4 className="font-medium mb-3">Plan vs Reality</h4>
+            <div className="space-y-3">
+              {[
+                { label: 'Entry', planned: selectedTrade.entry.planned, actual: selectedTrade.entry.actual },
+                { label: 'Stop/Exit', planned: selectedTrade.stop.planned, actual: selectedTrade.exit.actual },
+                { label: 'Target', planned: selectedTrade.exit.planned, actual: selectedTrade.exit.actual },
+                { label: 'Size', planned: selectedTrade.size.planned, actual: selectedTrade.size.actual }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-gray-50 p-3 rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">{item.label}</span>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500">Planned: ${item.planned}</div>
+                      <div className={`text-sm font-medium ${
+                        item.actual >= item.planned ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        Actual: ${item.actual}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Strategy Tags */}
+          <div>
+            <h4 className="font-medium mb-3">Strategy Tags</h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedTrade.strategy.map((tag, idx) => (
+                <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
