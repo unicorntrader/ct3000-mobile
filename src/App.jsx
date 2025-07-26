@@ -1,5 +1,5 @@
 import React from 'react';
-import TradingJournal from './TradingJournal';
+import TradingJournal from './AppRouter';
 
 function App() {
   return (
