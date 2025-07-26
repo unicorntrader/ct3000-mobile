@@ -9,9 +9,10 @@ import {
   Calendar,
   BarChart3
 } from 'lucide-react';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
-export const Dashboard = (props) => {
-  const { isMobile } = props;
+export const Dashboard = () => {
+  const isMobile = useIsMobile();
 
   const metrics = [
     { title: 'Active Plans', value: '12', trend: '+3 Today', color: 'blue', onClick: () => {} },
