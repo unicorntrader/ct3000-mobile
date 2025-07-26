@@ -9,7 +9,7 @@ export const MobileAdapter = ({ children, ...props }) => {
     { id: 'dashboard', name: 'Home', icon: Home },
     { id: 'plans', name: 'Plans', icon: Target },
     { id: 'trades', name: 'Trades', icon: BarChart3 },
-    { id: 'journal', name: 'Journal', icon: BookOpen },
+{ id: 'journal', name: 'Notes', icon: BookOpen },
     { id: 'performance', name: 'Stats', icon: TrendingUp }
   ];
 
