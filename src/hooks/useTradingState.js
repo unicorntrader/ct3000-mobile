@@ -117,4 +117,51 @@ export const useTradingState = () => {
   const computedData = {
     totalPnL: trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
     activePlans: tradePlans.filter(p => p.status === 'planned'),
-    todayTrades: trades.filter(t => t.timestamp && t.timestamp.startsWith
+    todayTrades: trades.filter(t => t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])),
+    winRate: trades.length > 0 ? ((trades.filter(t => t.outcome === 'win').length / trades.length) * 100).toFixed(1) : 0,
+    recentActivities: activities.slice(0, 6),
+    recentPlans: tradePlans.slice(-5)
+  };
+
+  // Return EVERYTHING the UI needs
+  return {
+    // State
+    activeModule,
+    expandedDays,
+    highlightedItem,
+    notePopup,
+    showNotePreviews,
+    tradePlans,
+    trades,
+    notes,
+    activities,
+    newPlan,
+    
+    // Setters
+    setActiveModule,
+    setExpandedDays,
+    setHighlightedItem,
+    setNotePopup,
+    setShowNotePreviews,
+    setTradePlans,
+    setTrades,
+    setNotes,
+    setActivities,
+    setNewPlan,
+    
+    // Actions
+    handleModuleChange,
+    handleActivityClick,
+    handlePlanClick,
+    addTradePlan,
+    deleteTradePlan,
+    executeTradePlan,
+    openNotePopup,
+    closeNotePopup,
+    saveNoteFromPopup,
+    updateDailyNote,
+    
+    // Computed data
+    ...computedData
+  };
+};
