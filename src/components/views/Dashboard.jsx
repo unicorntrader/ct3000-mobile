@@ -192,4 +192,4 @@ const ActionIcon = ({ id, className }) => {
     default:
       return <Plus className={className} />;
   }
-};
+}}
