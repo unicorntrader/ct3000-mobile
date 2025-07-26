@@ -1,2 +1,2 @@
-export { DashboardLogic } from './DashboardLogic';
-export { PlanTraderLogic } from './PlanTraderLogic';
+export { MobileAdapter } from './MobileAdapter';
+export { DesktopAdapter } from './DesktopAdapter';
