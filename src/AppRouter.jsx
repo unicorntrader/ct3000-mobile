@@ -4,7 +4,7 @@ import { Dashboard, PlanTrader, Journal } from './components/views';
 import { DesktopAdapter, MobileAdapter } from './components/adapters';
 import { useIsMobile } from './hooks/useIsMobile';
 
-function TradingJournal() {
+function AppRouter() {
   const tradingState = useTradingState();
   const isMobile = useIsMobile();
 
@@ -52,4 +52,4 @@ function TradingJournal() {
   );
 }
 
-export default TradingJournal;
+export default AppRouter;
