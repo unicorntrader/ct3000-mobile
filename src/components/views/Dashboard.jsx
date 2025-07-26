@@ -24,7 +24,7 @@ export const Dashboard = () => {
   if (isMobile) {
     return (
       <div style={{ padding: '1rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>CT3000 Mobile Dashboard</h2>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Dashboard</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           {metrics.map(metric => (
             <div
@@ -53,7 +53,7 @@ export const Dashboard = () => {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem' }}>CT3000 Desktop Dashboard</h2>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem' }}>Dashboard</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
         {metrics.map(metric => (
           <div
