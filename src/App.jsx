@@ -1,10 +1,10 @@
 import React from 'react';
-import TradingJournal from './AppRouter';
+import AppRouter from './AppRouter';
 
 function App() {
   return (
     <div className="min-h-screen bg-gray-100">
-      <TradingJournal />
+      <AppRouter />
     </div>
   );
 }
