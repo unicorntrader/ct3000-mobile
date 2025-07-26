@@ -1,242 +1,391 @@
 import React, { useState, useMemo } from 'react';
-import { Brain, TrendingUp, AlertTriangle, Target, Calendar, DollarSign } from 'lucide-react';
+import { Brain, Filter, X, TrendingUp, TrendingDown, AlertTriangle, Calendar, Plus } from 'lucide-react';
 
 export const SmartJournal = (props) => {
-  const { trades, tradePlans, isMobile } = props;
-  const [selectedTimeframe, setSelectedTimeframe] = useState('week');
+  const { isMobile } = props;
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedTrade, setSelectedTrade] = useState(null);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
 
-  // AI-like insights based on trading data
+  // Mock trade data (normally pulled from broker)
+  const mockTrades = [
+    {
+      id: 1,
+      symbol: 'AAPL',
+      date: '2025-07-26',
+      strategy: ['Breakout', 'Gap Up', 'Volume Spike'],
+      outcome: 'win',
+      pnl: 80,
+      rMultiple: 2.5,
+      holdTime: '4.2h',
+      adherence: 88,
+      entry: { planned: 175, actual: 176 },
+      exit: { planned: 185, actual: 184 },
+      stop: { planned: 170, actual: 170 },
+      size: { planned: 10, actual: 10 },
+      timeSession: 'NY-Open'
+    },
+    {
+      id: 2,
+      symbol: 'TSLA',
+      date: '2025-07-25',
+      strategy: ['Mean Reversion', 'Oversold'],
+      outcome: 'loss',
+      pnl: -50,
+      rMultiple: -1.2,
+      holdTime: '2.1h',
+      adherence: 61,
+      entry: { planned: 250, actual: 252 },
+      exit: { planned: 240, actual: 245 },
+      stop: { planned: 240, actual: 245 },
+      size: { planned: 5, actual: 3 },
+      timeSession: 'Mid-Day'
+    },
+    {
+      id: 3,
+      symbol: 'NVDA',
+      date: '2025-07-24',
+      strategy: ['Momentum', 'Earnings Play', 'Trend'],
+      outcome: 'win',
+      pnl: 145,
+      rMultiple: 3.1,
+      holdTime: '6.8h',
+      adherence: 95,
+      entry: { planned: 450, actual: 449 },
+      exit: { planned: 480, actual: 485 },
+      stop: { planned: 430, actual: 430 },
+      size: { planned: 2, actual: 2 },
+      timeSession: 'NY-Open'
+    }
+  ];
+
+  // Filter trades
+  const filteredTrades = useMemo(() => {
+    switch (selectedFilter) {
+      case 'wins':
+        return mockTrades.filter(t => t.outcome === 'win');
+      case 'losses':
+        return mockTrades.filter(t => t.outcome === 'loss');
+      case 'week':
+        return mockTrades.filter(t => {
+          const tradeDate = new Date(t.date);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return tradeDate >= weekAgo;
+        });
+      default:
+        return mockTrades;
+    }
+  }, [selectedFilter, mockTrades]);
+
+  // End-of-day insights
   const insights = useMemo(() => {
-    const winningTrades = trades.filter(t => t.outcome === 'win');
-    const losingTrades = trades.filter(t => t.outcome === 'loss');
-    const winRate = trades.length > 0 ? (winningTrades.length / trades.length * 100).toFixed(1) : 0;
-    const avgWin = winningTrades.length > 0 ? (winningTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / winningTrades.length).toFixed(2) : 0;
-    const avgLoss = losingTrades.length > 0 ? Math.abs(losingTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / losingTrades.length).toFixed(2) : 0;
-
+    const winRate = (mockTrades.filter(t => t.outcome === 'win').length / mockTrades.length * 100).toFixed(0);
+    const avgAdherence = (mockTrades.reduce((sum, t) => sum + t.adherence, 0) / mockTrades.length).toFixed(0);
+    
     return [
       {
-        type: 'performance',
-        title: 'Win Rate Analysis',
-        message: `Your ${winRate}% win rate is ${winRate > 60 ? 'excellent' : winRate > 45 ? 'good' : 'needs improvement'}. Focus on ${winRate < 50 ? 'trade selection' : 'position sizing'}.`,
-        severity: winRate > 60 ? 'positive' : winRate > 45 ? 'neutral' : 'warning',
-        icon: TrendingUp
-      },
-      {
-        type: 'risk',
-        title: 'Risk Management',
-        message: avgWin && avgLoss ? `Your avg win ($${avgWin}) to avg loss ($${avgLoss}) ratio is ${(avgWin/avgLoss).toFixed(1)}:1. ${avgWin/avgLoss > 2 ? 'Excellent risk management!' : 'Consider letting winners run longer.'}` : 'Need more trade data for analysis.',
-        severity: avgWin/avgLoss > 2 ? 'positive' : avgWin/avgLoss > 1.5 ? 'neutral' : 'warning',
-        icon: AlertTriangle
-      },
-      {
-        type: 'planning',
-        title: 'Trade Planning',
-        message: `You have ${tradePlans.filter(p => p.status === 'planned').length} active plans. ${tradePlans.length > 5 ? 'Great planning ahead!' : 'Consider planning more trades in advance.'}`,
-        severity: tradePlans.length > 5 ? 'positive' : 'neutral',
-        icon: Target
+        type: winRate >= 60 ? 'positive' : 'warning',
+        message: winRate >= 60 ? `Best performance: NY-Open (${winRate}% win-rate)` : `Missed entries in ${100 - avgAdherence}% of trades — refine timing`
       }
     ];
-  }, [trades, tradePlans]);
+  }, [mockTrades]);
 
-  const patterns = useMemo(() => {
-    // Simple pattern detection
-    const tickerCounts = {};
-    trades.forEach(trade => {
-      tickerCounts[trade.ticker] = (tickerCounts[trade.ticker] || 0) + 1;
-    });
+  const openTradeDetail = (trade) => {
+    setSelectedTrade(trade);
+    setShowBottomSheet(true);
+  };
 
-    const mostTraded = Object.entries(tickerCounts)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3);
-
-    return {
-      mostTraded,
-      timePreference: 'Morning sessions (9:30-11:00 AM)', // Mock data
-      bestPerformingSetup: 'Breakout trades',
-      suggestion: 'Your breakout trades have 75% win rate. Focus more on these setups.'
-    };
-  }, [trades]);
+  const closeBottomSheet = () => {
+    setShowBottomSheet(false);
+    setSelectedTrade(null);
+  };
 
   if (isMobile) {
     return (
       <div className="p-4 space-y-4">
+        {/* Header */}
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900">Smart Journal</h2>
-          <Brain className="h-6 w-6 text-purple-600" />
+          <div className="flex items-center space-x-2">
+            <Brain className="h-5 w-5 text-purple-600" />
+            <span className="text-sm text-gray-500">Live Insights (last 50)</span>
+          </div>
         </div>
 
-        {/* Timeframe Selector */}
-        <div className="flex space-x-2">
-          {['week', 'month', 'quarter'].map(period => (
+        {/* Insights */}
+        {insights.map((insight, index) => (
+          <div
+            key={index}
+            className={`p-3 rounded-lg flex items-center space-x-3 ${
+              insight.type === 'positive' ? 'bg-green-50 border-l-4 border-green-500' : 'bg-red-50 border-l-4 border-red-500'
+            }`}
+          >
+            {insight.type === 'positive' ? (
+              <div className="flex items-center text-green-600">
+                <span className="text-sm">✅</span>
+              </div>
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+            )}
+            <p className={`text-sm ${insight.type === 'positive' ? 'text-green-800' : 'text-red-800'}`}>
+              {insight.message}
+            </p>
+          </div>
+        ))}
+
+        {/* Filter Pills */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'wins', label: 'Wins' },
+            { id: 'losses', label: 'Losses' },
+            { id: 'week', label: 'This Week' }
+          ].map(filter => (
             <button
-              key={period}
-              onClick={() => setSelectedTimeframe(period)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                selectedTimeframe === period
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
+              key={filter.id}
+              onClick={() => setSelectedFilter(filter.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                selectedFilter === filter.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
+              {filter.label}
             </button>
           ))}
         </div>
 
-        {/* AI Insights */}
+        {/* Trade Cards */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
-          {insights.map((insight, index) => {
-            const Icon = insight.icon;
-            return (
-              <div
-                key={index}
-                className={`p-4 rounded-lg border-l-4 ${
-                  insight.severity === 'positive' ? 'bg-green-50 border-green-500' :
-                  insight.severity === 'warning' ? 'bg-red-50 border-red-500' :
-                  'bg-blue-50 border-blue-500'
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <Icon className={`h-5 w-5 mt-0.5 ${
-                    insight.severity === 'positive' ? 'text-green-600' :
-                    insight.severity === 'warning' ? 'text-red-600' :
-                    'text-blue-600'
-                  }`} />
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{insight.title}</h4>
-                    <p className="text-sm text-gray-700 mt-1">{insight.message}</p>
-                  </div>
+          {filteredTrades.map(trade => (
+            <div
+              key={trade.id}
+              onClick={() => openTradeDetail(trade)}
+              className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+            >
+              {/* Option A Format */}
+              <div className="flex justify-between items-start">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-lg">{trade.symbol}</span>
+                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                    {trade.strategy[0]}
+                  </span>
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    trade.outcome === 'win' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {trade.outcome}
+                  </span>
                 </div>
+                <span className={`font-bold ${
+                  trade.outcome === 'win' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {trade.outcome === 'win' ? '+' : ''}${trade.pnl}
+                </span>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Trading Patterns */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Trading Patterns</h3>
-          
-          <div className="space-y-3">
-            <div>
-              <h4 className="font-medium text-gray-700">Most Traded Symbols</h4>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {patterns.mostTraded.map(([ticker, count]) => (
-                  <span key={ticker} className="px-2 py-1 bg-gray-100 rounded text-sm">
-                    {ticker} ({count})
+              
+              <div className="mt-2 text-sm text-gray-600">
+                {trade.date} • {trade.rMultiple}R • {trade.holdTime}
+              </div>
+              
+              {/* Strategy Tags */}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {trade.strategy.map((tag, idx) => (
+                  <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
+                    {tag}
                   </span>
                 ))}
               </div>
             </div>
-            
-            <div>
-              <h4 className="font-medium text-gray-700">Best Setup</h4>
-              <p className="text-sm text-gray-600 mt-1">{patterns.bestPerformingSetup}</p>
-            </div>
-            
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <h4 className="font-medium text-purple-800">💡 Suggestion</h4>
-              <p className="text-sm text-purple-700 mt-1">{patterns.suggestion}</p>
+          ))}
+        </div>
+
+        {/* Bottom Sheet */}
+        {showBottomSheet && selectedTrade && (
+          <div className="fixed inset-0 z-50">
+            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={closeBottomSheet} />
+            <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-lg max-h-[80vh] overflow-y-auto">
+              {/* Bottom Sheet Header */}
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">Trade {selectedTrade.symbol}</h3>
+                <button onClick={closeBottomSheet}>
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              {/* Trade Details */}
+              <div className="p-4 space-y-4">
+                {/* Adherence */}
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <h4 className="font-medium mb-2">Adherence Breakdown</h4>
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    <div>
+                      <div className="text-green-600">✅</div>
+                      <div className="text-xs text-gray-600">Entry</div>
+                      <div className="text-sm font-medium">{selectedTrade.adherence}%</div>
+                    </div>
+                    <div>
+                      <div className="text-green-600">✅</div>
+                      <div className="text-xs text-gray-600">Stop</div>
+                      <div className="text-sm font-medium">100%</div>
+                    </div>
+                    <div>
+                      <div className="text-green-600">✅</div>
+                      <div className="text-xs text-gray-600">Target</div>
+                      <div className="text-sm font-medium">100%</div>
+                    </div>
+                    <div>
+                      <div className="text-green-600">✅</div>
+                      <div className="text-xs text-gray-600">Size</div>
+                      <div className="text-sm font-medium">100%</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plan vs Reality */}
+                <div>
+                  <h4 className="font-medium mb-3">Plan vs Reality</h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Entry', planned: selectedTrade.entry.planned, actual: selectedTrade.entry.actual },
+                      { label: 'Stop/Exit', planned: selectedTrade.stop.planned, actual: selectedTrade.exit.actual },
+                      { label: 'Target', planned: selectedTrade.exit.planned, actual: selectedTrade.exit.actual },
+                      { label: 'Size', planned: selectedTrade.size.planned, actual: selectedTrade.size.actual }
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span className="text-gray-600">{item.label}</span>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-500">Planned: ${item.planned}</div>
+                          <div className={`text-sm font-medium ${
+                            item.actual >= item.planned ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            Actual: ${item.actual}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Hold Time:</span>
+                    <div className="font-medium">{selectedTrade.holdTime}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Session:</span>
+                    <div className="font-medium">{selectedTrade.timeSession}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">R Multiple:</span>
+                    <div className="font-medium">{selectedTrade.rMultiple}R</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Position $:</span>
+                    <div className="font-medium">${selectedTrade.size.actual * selectedTrade.entry.actual}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
 
+  // Desktop version (simplified for now)
   return (
     <div className="space-y-6">
+      {/* Desktop Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Smart Journal</h2>
-        <div className="flex items-center space-x-2">
-          <Brain className="h-6 w-6 text-purple-600" />
-          <span className="text-sm text-gray-500">AI-Powered Insights</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Brain className="h-6 w-6 text-purple-600" />
+            <span className="text-sm text-gray-500">Live Insights (last 50)</span>
+          </div>
+          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
+            <Filter className="h-4 w-4" />
+            <span>Filters</span>
+          </button>
         </div>
       </div>
 
-      {/* Timeframe Selector */}
-      <div className="flex space-x-4">
-        {['week', 'month', 'quarter', 'year'].map(period => (
-          <button
-            key={period}
-            onClick={() => setSelectedTimeframe(period)}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              selectedTimeframe === period
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      {/* Desktop Insights */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {insights.map((insight, index) => (
+          <div
+            key={index}
+            className={`p-4 rounded-lg flex items-center space-x-3 ${
+              insight.type === 'positive' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
             }`}
           >
-            {period.charAt(0).toUpperCase() + period.slice(1)}
-          </button>
+            {insight.type === 'positive' ? (
+              <div className="text-green-600">✅</div>
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            )}
+            <p className={`${insight.type === 'positive' ? 'text-green-800' : 'text-red-800'}`}>
+              {insight.message}
+            </p>
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* AI Insights */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Insights</h3>
-          <div className="space-y-4">
-            {insights.map((insight, index) => {
-              const Icon = insight.icon;
-              return (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    insight.severity === 'positive' ? 'bg-green-50 border-green-500' :
-                    insight.severity === 'warning' ? 'bg-red-50 border-red-500' :
-                    'bg-blue-50 border-blue-500'
-                  }`}
+      {/* Desktop Table */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy/Tags</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">R</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P&L</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hold</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outcome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adh.</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredTrades.map(trade => (
+                <tr 
+                  key={trade.id} 
+                  onClick={() => openTradeDetail(trade)}
+                  className="hover:bg-gray-50 cursor-pointer"
                 >
-                  <div className="flex items-start space-x-3">
-                    <Icon className={`h-5 w-5 mt-0.5 ${
-                      insight.severity === 'positive' ? 'text-green-600' :
-                      insight.severity === 'warning' ? 'text-red-600' :
-                      'text-blue-600'
-                    }`} />
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{insight.title}</h4>
-                      <p className="text-sm text-gray-700 mt-1">{insight.message}</p>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{trade.symbol}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {trade.strategy.map((tag, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Trading Patterns */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Trading Patterns</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">Most Traded Symbols</h4>
-              <div className="flex flex-wrap gap-2">
-                {patterns.mostTraded.map(([ticker, count]) => (
-                  <span key={ticker} className="px-3 py-1 bg-gray-100 rounded-full text-sm">
-                    {ticker} ({count} trades)
-                  </span>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-gray-700">Preferred Trading Time</h4>
-              <p className="text-sm text-gray-600 mt-1">{patterns.timePreference}</p>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-gray-700">Best Performing Setup</h4>
-              <p className="text-sm text-gray-600 mt-1">{patterns.bestPerformingSetup}</p>
-            </div>
-            
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <h4 className="font-medium text-purple-800 flex items-center">
-                <span className="mr-2">💡</span>
-                AI Suggestion
-              </h4>
-              <p className="text-sm text-purple-700 mt-2">{patterns.suggestion}</p>
-            </div>
-          </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.rMultiple}R</td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                    trade.outcome === 'win' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {trade.outcome === 'win' ? '+' : ''}${trade.pnl}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.holdTime}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded ${
+                      trade.outcome === 'win' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {trade.outcome}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trade.adherence}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
