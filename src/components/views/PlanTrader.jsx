@@ -1,31 +1,21 @@
-import { useState, useMemo } from 'react';
-import { sampleData } from '../data/sampleData';
-import { calculateRiskReward } from '../utils/calculations';
+import React from 'react';
+import { Plus, Trash2, Play, Target } from 'lucide-react';
+import { calculateRiskReward } from '../../utils/calculations';
 
-export const useTradingState = () => {
-  // ALL state in one place
-  const [activeModule, setActiveModule] = useState('dashboard');
-  const [expandedDays, setExpandedDays] = useState({});
-  const [highlightedItem, setHighlightedItem] = useState(null);
-  const [notePopup, setNotePopup] = useState({ isOpen: false, date: '', note: '' });
-  const [showNotePreviews, setShowNotePreviews] = useState(false);
-  
-  const [tradePlans, setTradePlans] = useState(sampleData.tradePlans);
-  const [trades, setTrades] = useState(sampleData.trades);
-  const [notes, setNotes] = useState(sampleData.notes);
-  const [activities, setActivities] = useState(sampleData.activities);
-  const [newPlan, setNewPlan] = useState({
-    ticker: '',
-    entry: '',
-    target: '',
-    stopLoss: '',
-    position: 'long',
-    quantity: '',
-    notes: ''
-  });
+export const PlanTrader = (props) => {
+  const { 
+    tradePlans, 
+    newPlan, 
+    setNewPlan, 
+    addTradePlan, 
+    deleteTradePlan, 
+    executeTradePlan
+  } = props;
 
-  // Calculate risk/reward for new plan
-  const riskReward = useMemo(() => {
+  const [showForm, setShowForm] = React.useState(false);
+
+  // Calculate risk/reward for current plan
+  const riskReward = React.useMemo(() => {
     if (!newPlan.entry || !newPlan.target || !newPlan.stopLoss) {
       return { risk: '0.00', reward: '0.00', ratio: '0.0' };
     }
@@ -76,150 +66,67 @@ export const useTradingState = () => {
     }
   };
 
-  // ALL business logic in one place
-  const handleModuleChange = (moduleId) => {
-    setActiveModule(moduleId);
-  };
+  const analysis = getPlanAnalysis();
 
-  const handleActivityClick = (activity) => {
-    setActiveModule(activity.targetModule);
-    
-    if (activity.targetId) {
-      setHighlightedItem(activity.targetId);
-    }
-    
-    setTimeout(() => {
-      setHighlightedItem(null);
-    }, 2000);
-  };
+  // Check if mobile (simple detection)
+  const isMobile = window.innerWidth <= 768;
 
-  const handlePlanClick = (planId) => {
-    setActiveModule('plan-trader');
-    setHighlightedItem(planId);
-    setTimeout(() => {
-      setHighlightedItem(null);
-    }, 2000);
-  };
+  if (isMobile) {
+    return (
+      <div className="p-4 space-y-4">
+        {/* Mobile Header */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">Trade Plans</h2>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 text-white p-2 rounded-lg"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
 
-  const addTradePlan = () => {
-    if (isFormValid()) {
-      const plan = {
-        id: Date.now(),
-        ...newPlan,
-        timestamp: new Date().toISOString(),
-        status: 'planned'
-      };
-      setTradePlans([...tradePlans, plan]);
-      setNewPlan({
-        ticker: '',
-        entry: '',
-        target: '',
-        stopLoss: '',
-        position: 'long',
-        quantity: '',
-        notes: ''
-      });
-    }
-  };
-
-  const deleteTradePlan = (id) => {
-    setTradePlans(tradePlans.filter(plan => plan.id !== id));
-  };
-
-  const executeTradePlan = (planId) => {
-    const plan = tradePlans.find(p => p.id === planId);
-    if (plan) {
-      const trade = {
-        id: Date.now(),
-        ...plan,
-        executeTime: new Date().toISOString(),
-        status: 'executed',
-        pnl: Math.random() > 0.5 ? Math.random() * 500 : -Math.random() * 200,
-        outcome: Math.random() > 0.5 ? 'win' : 'loss',
-        exitPrice: parseFloat(plan.target) + (Math.random() - 0.5) * 10
-      };
-      setTrades([...trades, trade]);
-      setTradePlans(tradePlans.map(p => 
-        p.id === planId ? { ...p, status: 'executed' } : p
-      ));
-    }
-  };
-
-  const openNotePopup = (date) => {
-    setNotePopup({
-      isOpen: true,
-      date: date,
-      note: notes[date] || ''
-    });
-  };
-
-  const closeNotePopup = () => {
-    setNotePopup({ isOpen: false, date: '', note: '' });
-  };
-
-  const saveNoteFromPopup = () => {
-    setNotes({ ...notes, [notePopup.date]: notePopup.note });
-    closeNotePopup();
-  };
-
-  const updateDailyNote = (date, note) => {
-    setNotes({ ...notes, [date]: note });
-  };
-
-  // Computed values (derived state)
-  const computedData = {
-    totalPnL: trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
-    activePlans: tradePlans.filter(p => p.status === 'planned'),
-    todayTrades: trades.filter(t => t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])),
-    winRate: trades.length > 0 ? ((trades.filter(t => t.outcome === 'win').length / trades.length) * 100).toFixed(1) : 0,
-    recentActivities: activities.slice(0, 6),
-    recentPlans: tradePlans.slice(-5)
-  };
-
-  // Return EVERYTHING the UI needs
-  return {
-    // State
-    activeModule,
-    expandedDays,
-    highlightedItem,
-    notePopup,
-    showNotePreviews,
-    tradePlans,
-    trades,
-    notes,
-    activities,
-    newPlan,
-    
-    // Setters
-    setActiveModule,
-    setExpandedDays,
-    setHighlightedItem,
-    setNotePopup,
-    setShowNotePreviews,
-    setTradePlans,
-    setTrades,
-    setNotes,
-    setActivities,
-    setNewPlan,
-    
-    // Actions
-    handleModuleChange,
-    handleActivityClick,
-    handlePlanClick,
-    addTradePlan,
-    deleteTradePlan,
-    executeTradePlan,
-    openNotePopup,
-    closeNotePopup,
-    saveNoteFromPopup,
-    updateDailyNote,
-    
-    // PlanTrader specific
-    riskReward,
-    isFormValid,
-    getPlanAnalysis,
-    
-    // Computed data
-    ...computedData
-  };
-};
+        {/* Mobile Form */}
+        {showForm && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h3 className="font-semibold mb-4">New Trade Plan</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Ticker (AAPL)"
+                value={newPlan.ticker}
+                onChange={(e) => setNewPlan({...newPlan, ticker: e.target.value.toUpperCase()})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              
+              <div className="grid grid-cols-2 gap-3">
+                <select
+                  value={newPlan.position}
+                  onChange={(e) => setNewPlan({...newPlan, position: e.target.value})}
+                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="long">Long</option>
+                  <option value="short">Short</option>
+                </select>
+                <input
+                  type="number"
+                  placeholder="Entry Price"
+                  value={newPlan.entry}
+                  onChange={(e) => setNewPlan({...newPlan, entry: e.target.value})}
+                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  step="0.01"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  placeholder="Target Price"
+                  value={newPlan.target}
+                  onChange={(e) => setNewPlan({...newPlan, target: e.target.value})}
+                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  step="0.01"
+                />
+                <input
+                  type="number"
+                  placeholder="Stop Loss"
+                  value={newPlan.stopLoss}
