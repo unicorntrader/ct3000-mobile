@@ -4,11 +4,14 @@ import {
   Target,
   TrendingUp,
   Activity,
-  BarChart3
+  BarChart3,
+  Plus,
+  Edit3,
+  PieChart
 } from 'lucide-react';
 
 export const Dashboard = (props) => {
-  const { tradePlans, trades, isMobile } = props;
+  const { tradePlans, trades, isMobile, handleModuleChange } = props;
 
   // Calculate metrics from actual data
   const activePlans = tradePlans.filter(p => p.status === 'planned');
@@ -20,58 +23,142 @@ export const Dashboard = (props) => {
   const todayTrades = trades.filter(t => 
     t.timestamp && t.timestamp.startsWith(today)
   );
-  const todayWinners = todayTrades.filter(t => t.outcome === 'win');
 
   const metrics = [
     { 
+      title: 'Total P&L', 
+      value: `${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toLocaleString()}`, 
+      color: totalPnL >= 0 ? 'text-green-600' : 'text-red-600',
+      icon: DollarSign,
+      onClick: () => handleModuleChange && handleModuleChange('performance')
+    },
+    { 
       title: 'Active Plans', 
       value: activePlans.length.toString(), 
-      trend: `${activePlans.length} planned`, 
-      color: 'blue',
-      onClick: () => props.handleModuleChange && props.handleModuleChange('plan-trader')
-    },
-    { 
-      title: 'Total P&L', 
-      value: `$${totalPnL.toLocaleString()}`, 
-      trend: totalPnL >= 0 ? '+2.1%' : '-1.5%', 
-      color: totalPnL >= 0 ? 'green' : 'red',
-      onClick: () => props.handleModuleChange && props.handleModuleChange('performance')
-    },
-    { 
-      title: 'Win Rate', 
-      value: `${winRate}%`, 
-      trend: `${trades.length} total trades`, 
-      color: 'purple',
-      onClick: () => props.handleModuleChange && props.handleModuleChange('performance')
+      color: 'text-blue-600',
+      icon: Target,
+      onClick: () => handleModuleChange && handleModuleChange('plan-trader')
     },
     { 
       title: "Today's Trades", 
       value: todayTrades.length.toString(), 
-      trend: `${todayWinners.length} winners`, 
-      color: 'orange',
-      onClick: () => props.handleModuleChange && props.handleModuleChange('daily-view')
+      color: 'text-purple-600',
+      icon: Activity,
+      onClick: () => handleModuleChange && handleModuleChange('smart-journal')
     },
+    { 
+      title: 'Win Rate', 
+      value: `${winRate}%`, 
+      color: 'text-green-600',
+      icon: TrendingUp,
+      onClick: () => handleModuleChange && handleModuleChange('performance')
+    },
+  ];
+
+  // Mock recent activity data
+  const recentActivity = [
+    { action: 'AAPL trade executed', result: '+$80', time: '25/07/2025', type: 'win' },
+    { action: 'TSLA trade stopped out', result: '-$50', time: '24/07/2025', type: 'loss' },
+    { action: 'New plan created for NVDA', result: '', time: '24/07/2025', type: 'plan' },
+    { action: 'Journal entry added', result: '', time: '23/07/2025', type: 'note' },
+    { action: 'SPY plan executed', result: '+$120', time: '23/07/2025', type: 'win' }
+  ];
+
+  // Quick shortcuts
+  const shortcuts = [
+    { 
+      title: 'New Plan', 
+      icon: Plus, 
+      color: 'text-blue-600',
+      onClick: () => handleModuleChange && handleModuleChange('plan-trader')
+    },
+    { 
+      title: 'Add Note', 
+      icon: Edit3, 
+      color: 'text-purple-600',
+      onClick: () => handleModuleChange && handleModuleChange('notebook')
+    },
+    { 
+      title: 'Past Trades', 
+      icon: BarChart3, 
+      color: 'text-green-600',
+      onClick: () => handleModuleChange && handleModuleChange('smart-journal')
+    },
+    { 
+      title: 'Review Stats', 
+      icon: PieChart, 
+      color: 'text-orange-600',
+      onClick: () => handleModuleChange && handleModuleChange('performance')
+    }
   ];
 
   if (isMobile) {
     return (
       <div className="p-4">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Dashboard</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {metrics.map(metric => (
-            <div
-              key={metric.title}
-              className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={metric.onClick}
-            >
-              <div className="flex justify-between mb-2">
-                <p className="text-sm text-gray-600">{metric.title}</p>
-                <MetricIcon title={metric.title} color={metric.color} />
+        
+        {/* Metrics Cards */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {metrics.map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <div
+                key={metric.title}
+                className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={metric.onClick}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm text-gray-600">{metric.title}</p>
+                  <Icon className={`h-5 w-5 ${metric.color}`} />
+                </div>
+                <p className={`text-xl font-bold ${metric.color}`}>{metric.value}</p>
               </div>
-              <p className="text-xl font-bold text-gray-900">{metric.value}</p>
-              <p className="text-xs text-gray-500 mt-1">{metric.trend}</p>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* Recent Activity */}
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h3>
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {recentActivity.map((activity, index) => (
+              <div 
+                key={index} 
+                className={`flex justify-between items-center p-4 ${
+                  index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''
+                }`}
+              >
+                <div>
+                  <p className="font-medium text-gray-900">{activity.action}</p>
+                  <p className="text-sm text-gray-500">{activity.time}</p>
+                </div>
+                {activity.result && (
+                  <span className={`font-medium ${
+                    activity.result.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {activity.result}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Shortcuts */}
+        <div className="grid grid-cols-2 gap-3">
+          {shortcuts.map((shortcut, index) => {
+            const Icon = shortcut.icon;
+            return (
+              <div 
+                key={index} 
+                className="bg-white rounded-lg shadow-sm p-4 flex items-center space-x-3 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={shortcut.onClick}
+              >
+                <Icon className={`h-6 w-6 ${shortcut.color}`} />
+                <span className="font-medium text-gray-900">{shortcut.title}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -80,60 +167,73 @@ export const Dashboard = (props) => {
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map(metric => (
-          <div
-            key={metric.title}
-            className="bg-white rounded-lg shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow border-l-4"
-            style={{ borderLeftColor: getColor(metric.color) }}
-            onClick={metric.onClick}
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{metric.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metric.value}</p>
-                <p className="text-sm text-gray-500 mt-1">{metric.trend}</p>
+      
+      {/* Desktop Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {metrics.map(metric => {
+          const Icon = metric.icon;
+          return (
+            <div
+              key={metric.title}
+              className="bg-white rounded-lg shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow border-l-4"
+              style={{ borderLeftColor: metric.color.includes('green') ? '#10B981' : metric.color.includes('blue') ? '#3B82F6' : metric.color.includes('purple') ? '#8B5CF6' : '#F97316' }}
+              onClick={metric.onClick}
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{metric.title}</p>
+                  <p className={`text-2xl font-bold mt-1 ${metric.color}`}>{metric.value}</p>
+                </div>
+                <Icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-              <MetricIcon title={metric.title} color={metric.color} />
             </div>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Activity - Desktop */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            {recentActivity.map((activity, index) => (
+              <div key={index} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
+                <div>
+                  <p className="font-medium text-gray-900">{activity.action}</p>
+                  <p className="text-sm text-gray-500">{activity.time}</p>
+                </div>
+                {activity.result && (
+                  <span className={`font-medium ${
+                    activity.result.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {activity.result}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Quick Shortcuts - Desktop */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {shortcuts.map((shortcut, index) => {
+              const Icon = shortcut.icon;
+              return (
+                <div 
+                  key={index} 
+                  className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={shortcut.onClick}
+                >
+                  <Icon className={`h-6 w-6 ${shortcut.color}`} />
+                  <span className="font-medium text-gray-900">{shortcut.title}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-const MetricIcon = ({ title, color }) => {
-  const iconColor = getColor(color);
-  const iconProps = { color: iconColor, size: 24 };
-
-  switch (title) {
-    case 'Active Plans':
-      return <Target {...iconProps} />;
-    case 'Total P&L':
-      return <DollarSign {...iconProps} />;
-    case 'Win Rate':
-      return <TrendingUp {...iconProps} />;
-    case "Today's Trades":
-      return <Activity {...iconProps} />;
-    default:
-      return <BarChart3 {...iconProps} />;
-  }
-};
-
-const getColor = (color) => {
-  switch (color) {
-    case 'blue':
-      return '#3B82F6';
-    case 'green':
-      return '#10B981';
-    case 'red':
-      return '#EF4444';
-    case 'purple':
-      return '#8B5CF6';
-    case 'orange':
-      return '#F97316';
-    default:
-      return '#6B7280';
-  }
 };
