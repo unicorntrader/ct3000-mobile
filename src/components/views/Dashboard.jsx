@@ -94,9 +94,7 @@ export const Dashboard = (props) => {
 
   if (isMobile) {
     return (
-      <div className="p-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Dashboard</h2>
-        
+      <div className="p-4">        
         {/* Metrics Cards */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           {metrics.map((metric, index) => {
