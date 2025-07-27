@@ -50,16 +50,16 @@ export const Dashboard = (props) => {
       }
     },
     { 
-      title: "Total Trades", 
-      value: trades.length.toString(), 
-      color: 'text-purple-600',
+      title: "Plan Success", 
+      value: `${executedPlans}/${tradePlans.length}`, 
+      color: executedPlans/tradePlans.length >= 0.5 ? 'text-green-600' : 'text-yellow-600',
       icon: Activity,
-      insight: `${executedPlans} from plans`,
+      insight: `${Math.round((executedPlans/tradePlans.length) * 100) || 0}% executed`,
       onClick: () => {
         if (isMobile && setActiveTab) {
-          setActiveTab('trades');
+          setActiveTab('plans');
         } else if (handleModuleChange) {
-          handleModuleChange('smart-journal');
+          handleModuleChange('plan-trader');
         }
       }
     },
