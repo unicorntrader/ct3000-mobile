@@ -20,7 +20,8 @@ export const useTradingState = () => {
     stopLoss: '',
     position: 'long',
     quantity: '',
-    notes: ''
+    notes: '',
+    strategy: [] // Added strategy tags array
   });
 
   // ALL business logic in one place
@@ -49,7 +50,7 @@ export const useTradingState = () => {
   };
 
   const addTradePlan = () => {
-    if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss) {
+    if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss && newPlan.strategy && newPlan.strategy.length > 0) {
       const plan = {
         id: Date.now(),
         ...newPlan,
@@ -64,7 +65,8 @@ export const useTradingState = () => {
         stopLoss: '',
         position: 'long',
         quantity: '',
-        notes: ''
+        notes: '',
+        strategy: [] // Reset strategy tags
       });
     }
   };
@@ -83,7 +85,9 @@ export const useTradingState = () => {
         status: 'executed',
         pnl: Math.random() > 0.5 ? Math.random() * 500 : -Math.random() * 200,
         outcome: Math.random() > 0.5 ? 'win' : 'loss',
-        exitPrice: parseFloat(plan.target) + (Math.random() - 0.5) * 10
+        exitPrice: parseFloat(plan.target) + (Math.random() - 0.5) * 10,
+        // Strategy tags will be carried over from the plan
+        strategy: plan.strategy || []
       };
       setTrades([...trades, trade]);
       setTradePlans(tradePlans.map(p => 
