@@ -1,24 +1,30 @@
 import React from 'react';
-import { BarChart3, Menu, X, Home, Target, BookOpen, TrendingUp } from 'lucide-react';
+import { BarChart3, Menu, X, Home, Target, BookOpen, TrendingUp, User, Settings, LogOut } from 'lucide-react';
 
 export const MobileAdapter = ({ children, ...props }) => {
   const [activeTab, setActiveTab] = React.useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [profileSidebarOpen, setProfileSidebarOpen] = React.useState(false);
   
   const navItems = [
     { id: 'dashboard', name: 'Home', icon: Home },
     { id: 'plans', name: 'Plans', icon: Target },
     { id: 'trades', name: 'Trades', icon: BarChart3 },
-{ id: 'journal', name: 'Notes', icon: BookOpen },
+    { id: 'journal', name: 'Notes', icon: BookOpen },
     { id: 'performance', name: 'Stats', icon: TrendingUp }
+  ];
+
+  const profileItems = [
+    { name: 'Settings', icon: Settings },
+    { name: 'Account', icon: User },
+    { name: 'Logout', icon: LogOut }
   ];
 
   const mobileProps = {
     ...props,
     activeTab,
     setActiveTab,
-    sidebarOpen,
-    setSidebarOpen,
+    profileSidebarOpen,
+    setProfileSidebarOpen,
     navItems,
     isMobile: true
   };
@@ -33,7 +39,7 @@ export const MobileAdapter = ({ children, ...props }) => {
             <h1 className="text-lg font-bold text-gray-900">CT3000</h1>
           </div>
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setProfileSidebarOpen(true)}
             className="p-2 text-gray-600 hover:text-gray-900"
           >
             <Menu className="h-6 w-6" />
@@ -41,32 +47,44 @@ export const MobileAdapter = ({ children, ...props }) => {
         </div>
       </header>
 
-      {/* Mobile Sidebar */}
-      {sidebarOpen && (
+      {/* User Profile Sidebar */}
+      {profileSidebarOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setProfileSidebarOpen(false)} />
           <div className="fixed right-0 top-0 h-full w-64 bg-white shadow-lg">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Menu</h2>
-              <button onClick={() => setSidebarOpen(false)}>
+              <h2 className="text-lg font-semibold">Profile</h2>
+              <button onClick={() => setProfileSidebarOpen(false)}>
                 <X className="h-6 w-6" />
               </button>
             </div>
+            
+            {/* Profile Info */}
+            <div className="p-4 border-b">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">John Trader</h3>
+                  <p className="text-sm text-gray-500">john@example.com</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Options */}
             <nav className="p-4">
-              {navItems.map(item => {
+              {profileItems.map(item => {
                 const Icon = item.icon;
                 return (
                   <button
-                    key={item.id}
+                    key={item.name}
                     onClick={() => {
-                      setActiveTab(item.id);
-                      setSidebarOpen(false);
+                      // Handle profile actions here
+                      console.log(`${item.name} clicked`);
+                      setProfileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg mb-2 transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className="w-full flex items-center space-x-3 p-3 rounded-lg mb-2 transition-colors text-gray-700 hover:bg-gray-100"
                   >
                     <Icon className="h-5 w-5" />
                     <span>{item.name}</span>
