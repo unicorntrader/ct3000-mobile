@@ -19,11 +19,17 @@ export const Dashboard = (props) => {
   const winningTrades = trades.filter(t => t.outcome === 'win');
   const winRate = trades.length > 0 ? ((winningTrades.length / trades.length) * 100).toFixed(0) : 0;
   
-  // Calculate adherence score (simplified version based on plan execution)
-  const executedPlans = tradePlans.filter(p => p.status === 'executed').length;
-  const planAdherence = tradePlans.length > 0 ? Math.round((executedPlans / tradePlans.length) * 100) : 0;
-  // In real app, this would factor in: entry timing, exit discipline, position sizing, stop loss adherence
-  const adherenceScore = Math.max(60, planAdherence + Math.random() * 20); // Mock realistic score
+  // Mock adherence score (30-day rolling average)
+  // In real app: calculated from plan vs execution data
+  const mockAdherenceScore = () => {
+    const baseScore = 75; // Starting point
+    const planExecutionBonus = (tradePlans.filter(p => p.status === 'executed').length / Math.max(tradePlans.length, 1)) * 15;
+    const winRateBonus = (parseInt(winRate) > 50) ? 8 : -5;
+    const consistencyFactor = Math.random() * 10 - 2; // Some variance
+    return Math.min(95, Math.max(45, baseScore + planExecutionBonus + winRateBonus + consistencyFactor));
+  };
+  
+  const adherenceScore = mockAdherenceScore();
 
   const metrics = [
     { 
