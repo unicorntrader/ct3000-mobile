@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export const Dashboard = (props) => {
-  const { tradePlans, trades, isMobile, handleModuleChange } = props;
+  const { tradePlans, trades, isMobile, handleModuleChange, setActiveTab } = props;
 
   // Calculate metrics from actual data
   const activePlans = tradePlans.filter(p => p.status === 'planned');
@@ -30,72 +30,120 @@ export const Dashboard = (props) => {
       value: `${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toLocaleString()}`, 
       color: totalPnL >= 0 ? 'text-green-600' : 'text-red-600',
       icon: DollarSign,
-      onClick: () => handleModuleChange && handleModuleChange('performance')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('performance');
+        } else if (handleModuleChange) {
+          handleModuleChange('performance');
+        }
+      }
     },
     { 
       title: 'Active Plans', 
       value: activePlans.length.toString(), 
       color: 'text-blue-600',
       icon: Target,
-      onClick: () => handleModuleChange && handleModuleChange('plan-trader')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('plans');
+        } else if (handleModuleChange) {
+          handleModuleChange('plan-trader');
+        }
+      }
     },
     { 
       title: "Today's Trades", 
       value: todayTrades.length.toString(), 
       color: 'text-purple-600',
       icon: Activity,
-      onClick: () => handleModuleChange && handleModuleChange('smart-journal')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('trades');
+        } else if (handleModuleChange) {
+          handleModuleChange('smart-journal');
+        }
+      }
     },
     { 
       title: 'Win Rate', 
       value: `${winRate}%`, 
       color: 'text-green-600',
       icon: TrendingUp,
-      onClick: () => handleModuleChange && handleModuleChange('performance')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('performance');
+        } else if (handleModuleChange) {
+          handleModuleChange('performance');
+        }
+      }
     },
   ];
 
-  // Mock recent activity data
+  // Better recent activity - APP ACTIONS ONLY
   const recentActivity = [
-    { action: 'AAPL trade executed', result: '+$80', time: '25/07/2025', type: 'win' },
-    { action: 'TSLA trade stopped out', result: '-$50', time: '24/07/2025', type: 'loss' },
-    { action: 'New plan created for NVDA', result: '', time: '24/07/2025', type: 'plan' },
-    { action: 'Journal entry added', result: '', time: '23/07/2025', type: 'note' },
-    { action: 'SPY plan executed', result: '+$120', time: '23/07/2025', type: 'win' }
+    { action: 'NVDA plan created', result: '', time: '25/07/2025', type: 'plan' },
+    { action: 'Journal entry added', result: '', time: '24/07/2025', type: 'note' },
+    { action: 'TSLA plan executed', result: '', time: '24/07/2025', type: 'execute' },
+    { action: 'AAPL plan deleted', result: '', time: '23/07/2025', type: 'delete' },
+    { action: 'Daily note saved', result: '', time: '23/07/2025', type: 'note' }
   ];
 
-  // Quick shortcuts
+  // Quick shortcuts with working navigation
   const shortcuts = [
     { 
       title: 'New Plan', 
       icon: Plus, 
       color: 'text-blue-600',
-      onClick: () => handleModuleChange && handleModuleChange('plan-trader')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('plans');
+        } else if (handleModuleChange) {
+          handleModuleChange('plan-trader');
+        }
+      }
     },
     { 
       title: 'Add Note', 
       icon: Edit3, 
       color: 'text-purple-600',
-      onClick: () => handleModuleChange && handleModuleChange('notebook')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('journal');
+        } else if (handleModuleChange) {
+          handleModuleChange('notebook');
+        }
+      }
     },
     { 
       title: 'Past Trades', 
       icon: BarChart3, 
       color: 'text-green-600',
-      onClick: () => handleModuleChange && handleModuleChange('smart-journal')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('trades');
+        } else if (handleModuleChange) {
+          handleModuleChange('smart-journal');
+        }
+      }
     },
     { 
       title: 'Review Stats', 
       icon: PieChart, 
       color: 'text-orange-600',
-      onClick: () => handleModuleChange && handleModuleChange('performance')
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('performance');
+        } else if (handleModuleChange) {
+          handleModuleChange('performance');
+        }
+      }
     }
   ];
 
   if (isMobile) {
     return (
-      <div className="p-4">        
-        {/* Metrics Cards */}
+      <div className="p-4">
+        {/* Metrics Cards - NO TITLE */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           {metrics.map((metric, index) => {
             const Icon = metric.icon;
@@ -115,7 +163,7 @@ export const Dashboard = (props) => {
           })}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity - APP ACTIONS */}
         <div className="mb-6">
           <h3 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h3>
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -130,19 +178,12 @@ export const Dashboard = (props) => {
                   <p className="font-medium text-gray-900">{activity.action}</p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
-                {activity.result && (
-                  <span className={`font-medium ${
-                    activity.result.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {activity.result}
-                  </span>
-                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Quick Shortcuts */}
+        {/* Quick Shortcuts - WORKING NAVIGATION */}
         <div className="grid grid-cols-2 gap-3">
           {shortcuts.map((shortcut, index) => {
             const Icon = shortcut.icon;
@@ -200,13 +241,6 @@ export const Dashboard = (props) => {
                   <p className="font-medium text-gray-900">{activity.action}</p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
-                {activity.result && (
-                  <span className={`font-medium ${
-                    activity.result.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {activity.result}
-                  </span>
-                )}
               </div>
             ))}
           </div>
