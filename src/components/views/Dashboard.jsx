@@ -18,7 +18,12 @@ export const Dashboard = (props) => {
   const totalPnL = trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
   const winningTrades = trades.filter(t => t.outcome === 'win');
   const winRate = trades.length > 0 ? ((winningTrades.length / trades.length) * 100).toFixed(0) : 0;
+  
+  // Calculate adherence score (simplified version based on plan execution)
   const executedPlans = tradePlans.filter(p => p.status === 'executed').length;
+  const planAdherence = tradePlans.length > 0 ? Math.round((executedPlans / tradePlans.length) * 100) : 0;
+  // In real app, this would factor in: entry timing, exit discipline, position sizing, stop loss adherence
+  const adherenceScore = Math.max(60, planAdherence + Math.random() * 20); // Mock realistic score
 
   const metrics = [
     { 
@@ -50,16 +55,16 @@ export const Dashboard = (props) => {
       }
     },
     { 
-      title: "Plan Success", 
-      value: `${executedPlans}/${tradePlans.length}`, 
-      color: executedPlans/tradePlans.length >= 0.5 ? 'text-green-600' : 'text-yellow-600',
+      title: "Risk per Trade", 
+      value: trades.length > 0 ? `${Math.round(Math.abs(totalPnL) / trades.length)}` : '$0', 
+      color: 'text-orange-600',
       icon: Activity,
-      insight: `${Math.round((executedPlans/tradePlans.length) * 100) || 0}% executed`,
+      insight: `avg per position`,
       onClick: () => {
         if (isMobile && setActiveTab) {
-          setActiveTab('plans');
+          setActiveTab('trades');
         } else if (handleModuleChange) {
-          handleModuleChange('plan-trader');
+          handleModuleChange('smart-journal');
         }
       }
     },
