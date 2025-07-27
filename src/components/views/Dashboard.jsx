@@ -19,17 +19,8 @@ export const Dashboard = (props) => {
   const winningTrades = trades.filter(t => t.outcome === 'win');
   const winRate = trades.length > 0 ? ((winningTrades.length / trades.length) * 100).toFixed(0) : 0;
   
-  // Mock adherence score (30-day rolling average)
-  // In real app: calculated from plan vs execution data
-  const mockAdherenceScore = () => {
-    const baseScore = 75; // Starting point
-    const planExecutionBonus = (tradePlans.filter(p => p.status === 'executed').length / Math.max(tradePlans.length, 1)) * 15;
-    const winRateBonus = (parseInt(winRate) > 50) ? 8 : -5;
-    const consistencyFactor = Math.random() * 10 - 2; // Some variance
-    return Math.min(95, Math.max(45, baseScore + planExecutionBonus + winRateBonus + consistencyFactor));
-  };
-  
-  const adherenceScore = mockAdherenceScore();
+  // Mock adherence score (30-day rolling average) - STATIC for now
+  const adherenceScore = 84; // Fixed value - will be dynamic later
 
   const metrics = [
     { 
@@ -61,11 +52,11 @@ export const Dashboard = (props) => {
       }
     },
     { 
-      title: "Risk per Trade", 
-      value: trades.length > 0 ? `${Math.round(Math.abs(totalPnL) / trades.length)}` : '$0', 
-      color: 'text-orange-600',
+      title: "Adherence Score", 
+      value: `${adherenceScore}%`, 
+      color: adherenceScore >= 80 ? 'text-green-600' : adherenceScore >= 65 ? 'text-yellow-600' : 'text-red-600',
       icon: Activity,
-      insight: `avg per position`,
+      insight: `30-day discipline`,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('trades');
@@ -282,7 +273,7 @@ export const Dashboard = (props) => {
             <div
               key={metric.title}
               className="bg-white rounded-lg shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow border-l-4"
-              style={{ borderLeftColor: metric.color.includes('green') ? '#10B981' : metric.color.includes('blue') ? '#3B82F6' : metric.color.includes('purple') ? '#8B5CF6' : '#F97316' }}
+              style={{ borderLeftColor: metric.color.includes('green') ? '#10B981' : metric.color.includes('blue') ? '#3B82F6' : metric.color.includes('purple') ? '#8B5CF6' : metric.color.includes('yellow') ? '#F59E0B' : '#F97316' }}
               onClick={metric.onClick}
             >
               <div className="flex justify-between items-center">
