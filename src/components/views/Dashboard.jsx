@@ -18,18 +18,15 @@ export const Dashboard = (props) => {
   const totalPnL = trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
   const winningTrades = trades.filter(t => t.outcome === 'win');
   const winRate = trades.length > 0 ? ((winningTrades.length / trades.length) * 100).toFixed(0) : 0;
-  
-  const today = new Date().toISOString().split('T')[0];
-  const todayTrades = trades.filter(t => 
-    t.timestamp && t.timestamp.startsWith(today)
-  );
+  const executedPlans = tradePlans.filter(p => p.status === 'executed').length;
 
   const metrics = [
     { 
-      title: 'Total P&L', 
+      title: 'This Week P&L', 
       value: `${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toLocaleString()}`, 
       color: totalPnL >= 0 ? 'text-green-600' : 'text-red-600',
       icon: DollarSign,
+      insight: `${trades.length} trades total`,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('performance');
@@ -43,6 +40,7 @@ export const Dashboard = (props) => {
       value: activePlans.length.toString(), 
       color: 'text-blue-600',
       icon: Target,
+      insight: `${activePlans.length} setups ready`,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('plans');
@@ -52,10 +50,11 @@ export const Dashboard = (props) => {
       }
     },
     { 
-      title: "Today's Trades", 
-      value: todayTrades.length.toString(), 
+      title: "Total Trades", 
+      value: trades.length.toString(), 
       color: 'text-purple-600',
       icon: Activity,
+      insight: `${executedPlans} from plans`,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('trades');
@@ -67,8 +66,9 @@ export const Dashboard = (props) => {
     { 
       title: 'Win Rate', 
       value: `${winRate}%`, 
-      color: 'text-green-600',
+      color: parseInt(winRate) >= 60 ? 'text-green-600' : parseInt(winRate) >= 40 ? 'text-yellow-600' : 'text-red-600',
       icon: TrendingUp,
+      insight: `${winningTrades.length}/${trades.length} wins`,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('performance');
@@ -79,13 +79,12 @@ export const Dashboard = (props) => {
     },
   ];
 
-  // Recent activity - USER APP ACTIONS ONLY
+  // Recent activity with smart navigation logic
   const recentActivity = [
     { 
       action: 'NVDA plan created', 
       time: '25/07/2025', 
-      targetModule: 'plan-trader', 
-      itemId: 'plan_123',
+      isClickable: true,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('plans');
@@ -97,8 +96,7 @@ export const Dashboard = (props) => {
     { 
       action: 'Daily note added', 
       time: '24/07/2025', 
-      targetModule: 'notes', 
-      itemId: '2025-07-24',
+      isClickable: true,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('journal');
@@ -110,21 +108,13 @@ export const Dashboard = (props) => {
     { 
       action: 'AAPL plan deleted', 
       time: '24/07/2025', 
-      targetModule: 'plan-trader', 
-      itemId: null,
-      onClick: () => {
-        if (isMobile && setActiveTab) {
-          setActiveTab('plans');
-        } else if (handleModuleChange) {
-          handleModuleChange('plan-trader');
-        }
-      }
+      isClickable: false, // Don't navigate to deleted items
+      onClick: null
     },
     { 
       action: 'Note updated', 
       time: '23/07/2025', 
-      targetModule: 'notes', 
-      itemId: '2025-07-23',
+      isClickable: true,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('journal');
@@ -136,8 +126,7 @@ export const Dashboard = (props) => {
     { 
       action: 'SPY plan created', 
       time: '23/07/2025', 
-      targetModule: 'plan-trader', 
-      itemId: 'plan_456',
+      isClickable: true,
       onClick: () => {
         if (isMobile && setActiveTab) {
           setActiveTab('plans');
@@ -202,8 +191,8 @@ export const Dashboard = (props) => {
 
   if (isMobile) {
     return (
-      <div className="p-4">
-        {/* Metrics Cards - NO TITLE */}
+      <div className="p-4 min-h-screen">
+        {/* Performance Cards with better context */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           {metrics.map((metric, index) => {
             const Icon = metric.icon;
@@ -218,35 +207,14 @@ export const Dashboard = (props) => {
                   <Icon className={`h-5 w-5 ${metric.color}`} />
                 </div>
                 <p className={`text-xl font-bold ${metric.color}`}>{metric.value}</p>
+                <p className="text-xs text-gray-500 mt-1">{metric.insight}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Recent Activity - CLICKABLE USER ACTIONS */}
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h3>
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            {recentActivity.map((activity, index) => (
-              <div 
-                key={index} 
-                className={`flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''
-                }`}
-                onClick={activity.onClick}
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{activity.action}</p>
-                  <p className="text-sm text-gray-500">{activity.time}</p>
-                </div>
-                <div className="text-blue-600 text-sm">→</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Shortcuts - WORKING NAVIGATION */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Quick Actions - Moved up for better flow */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {shortcuts.map((shortcut, index) => {
             const Icon = shortcut.icon;
             return (
@@ -260,6 +228,32 @@ export const Dashboard = (props) => {
               </div>
             );
           })}
+        </div>
+
+        {/* Recent Activity with smart navigation */}
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h3>
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {recentActivity.map((activity, index) => (
+              <div 
+                key={index} 
+                className={`flex justify-between items-center p-4 transition-colors ${
+                  activity.isClickable ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                } ${
+                  index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''
+                }`}
+                onClick={activity.isClickable ? activity.onClick : undefined}
+              >
+                <div>
+                  <p className={`font-medium ${activity.isClickable ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {activity.action}
+                  </p>
+                  <p className="text-sm text-gray-500">{activity.time}</p>
+                </div>
+                {activity.isClickable && <div className="text-blue-600 text-sm">→</div>}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -284,6 +278,7 @@ export const Dashboard = (props) => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">{metric.title}</p>
                   <p className={`text-2xl font-bold mt-1 ${metric.color}`}>{metric.value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{metric.insight}</p>
                 </div>
                 <Icon className={`h-6 w-6 ${metric.color}`} />
               </div>
@@ -300,14 +295,18 @@ export const Dashboard = (props) => {
             {recentActivity.map((activity, index) => (
               <div 
                 key={index} 
-                className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors rounded"
-                onClick={activity.onClick}
+                className={`flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0 transition-colors rounded ${
+                  activity.isClickable ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                }`}
+                onClick={activity.isClickable ? activity.onClick : undefined}
               >
                 <div>
-                  <p className="font-medium text-gray-900">{activity.action}</p>
+                  <p className={`font-medium ${activity.isClickable ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {activity.action}
+                  </p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
-                <div className="text-blue-600 text-sm">→</div>
+                {activity.isClickable && <div className="text-blue-600 text-sm">→</div>}
               </div>
             ))}
           </div>
