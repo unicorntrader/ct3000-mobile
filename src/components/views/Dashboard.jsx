@@ -79,13 +79,73 @@ export const Dashboard = (props) => {
     },
   ];
 
-  // Better recent activity - APP ACTIONS ONLY
+  // Recent activity - USER APP ACTIONS ONLY
   const recentActivity = [
-    { action: 'NVDA plan created', result: '', time: '25/07/2025', type: 'plan' },
-    { action: 'Journal entry added', result: '', time: '24/07/2025', type: 'note' },
-    { action: 'TSLA plan executed', result: '', time: '24/07/2025', type: 'execute' },
-    { action: 'AAPL plan deleted', result: '', time: '23/07/2025', type: 'delete' },
-    { action: 'Daily note saved', result: '', time: '23/07/2025', type: 'note' }
+    { 
+      action: 'NVDA plan created', 
+      time: '25/07/2025', 
+      targetModule: 'plan-trader', 
+      itemId: 'plan_123',
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('plans');
+        } else if (handleModuleChange) {
+          handleModuleChange('plan-trader');
+        }
+      }
+    },
+    { 
+      action: 'Daily note added', 
+      time: '24/07/2025', 
+      targetModule: 'notes', 
+      itemId: '2025-07-24',
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('journal');
+        } else if (handleModuleChange) {
+          handleModuleChange('notebook');
+        }
+      }
+    },
+    { 
+      action: 'AAPL plan deleted', 
+      time: '24/07/2025', 
+      targetModule: 'plan-trader', 
+      itemId: null,
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('plans');
+        } else if (handleModuleChange) {
+          handleModuleChange('plan-trader');
+        }
+      }
+    },
+    { 
+      action: 'Note updated', 
+      time: '23/07/2025', 
+      targetModule: 'notes', 
+      itemId: '2025-07-23',
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('journal');
+        } else if (handleModuleChange) {
+          handleModuleChange('notebook');
+        }
+      }
+    },
+    { 
+      action: 'SPY plan created', 
+      time: '23/07/2025', 
+      targetModule: 'plan-trader', 
+      itemId: 'plan_456',
+      onClick: () => {
+        if (isMobile && setActiveTab) {
+          setActiveTab('plans');
+        } else if (handleModuleChange) {
+          handleModuleChange('plan-trader');
+        }
+      }
+    }
   ];
 
   // Quick shortcuts with working navigation
@@ -163,21 +223,23 @@ export const Dashboard = (props) => {
           })}
         </div>
 
-        {/* Recent Activity - APP ACTIONS */}
+        {/* Recent Activity - CLICKABLE USER ACTIONS */}
         <div className="mb-6">
           <h3 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h3>
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             {recentActivity.map((activity, index) => (
               <div 
                 key={index} 
-                className={`flex justify-between items-center p-4 ${
+                className={`flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                   index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''
                 }`}
+                onClick={activity.onClick}
               >
                 <div>
                   <p className="font-medium text-gray-900">{activity.action}</p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
+                <div className="text-blue-600 text-sm">→</div>
               </div>
             ))}
           </div>
@@ -236,11 +298,16 @@ export const Dashboard = (props) => {
           <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
           <div className="space-y-4">
             {recentActivity.map((activity, index) => (
-              <div key={index} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
+              <div 
+                key={index} 
+                className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors rounded"
+                onClick={activity.onClick}
+              >
                 <div>
                   <p className="font-medium text-gray-900">{activity.action}</p>
                   <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
+                <div className="text-blue-600 text-sm">→</div>
               </div>
             ))}
           </div>
