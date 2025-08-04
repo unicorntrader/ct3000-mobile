@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import {
   DollarSign,
@@ -12,7 +13,8 @@ import {
   Filter,
   RefreshCw,
   Award,
-  AlertTriangle
+  AlertTriangle,
+  Brain
 } from 'lucide-react';
 
 export const Performance = (props) => {
