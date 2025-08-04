@@ -155,6 +155,150 @@ export const Performance = (props) => {
     return Object.values(dailyStats).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredTrades]);
 
+  // BLEEDING DETECTOR - Key behavioral insights
+  const insights = useMemo(() => {
+    const insights = [];
+    
+    if (filteredTrades.length < 5) return insights; // Need minimum data
+    
+    // 1. SIZE DISCIPLINE ANALYSIS
+    // Group trades by position size (if quantity data exists)
+    const sizeGroups = {
+      small: filteredTrades.filter(t => t.quantity <= 50),
+      medium: filteredTrades.filter(t => t.quantity > 50 && t.quantity <= 100),
+      large: filteredTrades.filter(t => t.quantity > 100)
+    };
+    
+    Object.entries(sizeGroups).forEach(([size, trades]) => {
+      if (trades.length >= 3) {
+        const winRate = (trades.filter(t => t.outcome === 'win').length / trades.length) * 100;
+        const avgPnL = trades.reduce((sum, t) => sum + (t.pnl || 0), 0) / trades.length;
+        
+        if (size === 'large' && (winRate < 40 || avgPnL < -50)) {
+          insights.push({
+            type: 'warning',
+            category: 'Size Discipline',
+            title: 'Large Position Underperformance',
+            message: `Your larger positions (${trades.length} trades) show ${winRate.toFixed(0)}% win rate vs smaller positions. Consider position sizing impact.`,
+            severity: 'medium',
+            impact: Math.abs(avgPnL * trades.length).toFixed(0)
+          });
+        }
+      }
+    });
+    
+    // 2. RISK/REWARD PATTERN ANALYSIS
+    // Calculate R/R for trades and group by performance
+    const tradesWithRR = filteredTrades.filter(t => t.entry && t.exitPrice && t.pnl);
+    if (tradesWithRR.length >= 5) {
+      const lowRRTrades = tradesWithRR.filter(t => {
+        const risk = Math.abs(t.entry - (t.stopLoss || t.entry * 0.95));
+        const reward = Math.abs(t.exitPrice - t.entry);
+        const rrRatio = reward / risk;
+        return rrRatio < 1.5;
+      });
+      
+      if (lowRRTrades.length >= 3) {
+        const lowRRWinRate = (lowRRTrades.filter(t => t.outcome === 'win').length / lowRRTrades.length) * 100;
+        const lowRRPnL = lowRRTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+        
+        if (lowRRWinRate < 65 || lowRRPnL < 0) {
+          insights.push({
+            type: 'warning',
+            category: 'Risk Management',
+            title: 'Low Risk/Reward Setup Pattern',
+            message: `${lowRRTrades.length} trades with poor risk/reward ratios show ${lowRRWinRate.toFixed(0)}% win rate. These setups may need higher win rates to be profitable.`,
+            severity: 'high',
+            impact: Math.abs(lowRRPnL).toFixed(0)
+          });
+        }
+      }
+    }
+    
+    // 3. PROFIT MANAGEMENT ANALYSIS
+    // Compare winning vs losing trade holding patterns
+    const winners = filteredTrades.filter(t => t.outcome === 'win' && t.pnl > 0);
+    const losers = filteredTrades.filter(t => t.outcome === 'loss' && t.pnl < 0);
+    
+    if (winners.length >= 3 && losers.length >= 3) {
+      const avgWinAmount = winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length;
+      const avgLossAmount = Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length);
+      
+      // Check if cutting winners too early vs letting losers run
+      if (avgLossAmount > avgWinAmount * 1.5) {
+        insights.push({
+          type: 'info',
+          category: 'Profit Management', 
+          title: 'Winner vs Loser Size Imbalance',
+          message: `Average loss (${avgLossAmount.toFixed(0)}) is ${(avgLossAmount/avgWinAmount).toFixed(1)}x larger than average win (${avgWinAmount.toFixed(0)}). Consider letting winners run longer.`,
+          severity: 'medium',
+          impact: ((avgLossAmount - avgWinAmount) * Math.min(winners.length, losers.length)).toFixed(0)
+        });
+      }
+    }
+    
+    // 4. EXECUTION DRIFT ANALYSIS 
+    // Check for systematic entry price drift from planned levels
+    const plansWithExecutions = tradePlans.filter(plan => 
+      filteredTrades.some(trade => trade.ticker === plan.ticker && Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
+    );
+    
+    if (plansWithExecutions.length >= 3) {
+      let totalDrift = 0;
+      let driftCount = 0;
+      
+      plansWithExecutions.forEach(plan => {
+        const matchingTrade = filteredTrades.find(trade => 
+          trade.ticker === plan.ticker && 
+          Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000
+        );
+        
+        if (matchingTrade) {
+          const drift = Math.abs(parseFloat(plan.entry) - matchingTrade.entry);
+          const driftPercent = (drift / parseFloat(plan.entry)) * 100;
+          
+          if (driftPercent > 2) { // More than 2% drift
+            totalDrift += driftPercent;
+            driftCount++;
+          }
+        }
+      });
+      
+      if (driftCount >= 2) {
+        const avgDrift = totalDrift / driftCount;
+        insights.push({
+          type: 'info',
+          category: 'Execution Quality',
+          title: 'Plan vs Execution Drift',
+          message: `${driftCount} trades show significant entry price drift (avg ${avgDrift.toFixed(1)}% from plan). Market timing or order management may need attention.`,
+          severity: 'low',
+          impact: 'execution_quality'
+        });
+      }
+    }
+    
+    // 5. POSITIVE PATTERN RECOGNITION
+    // Find what's actually working well
+    if (metrics.winRate > 60 && metrics.totalTrades >= 5) {
+      const bestSymbol = symbolPerformance[0];
+      if (bestSymbol && bestSymbol.winRate > 70) {
+        insights.push({
+          type: 'success',
+          category: 'Strength Recognition',
+          title: 'Strong Symbol Performance',
+          message: `${bestSymbol.symbol} shows exceptional performance: ${bestSymbol.winRate.toFixed(0)}% win rate across ${bestSymbol.trades} trades. This edge is worth exploring further.`,
+          severity: 'positive',
+          impact: bestSymbol.pnl.toFixed(0)
+        });
+      }
+    }
+    
+    return insights.sort((a, b) => {
+      const severityOrder = { high: 3, medium: 2, low: 1, positive: 0 };
+      return severityOrder[b.severity] - severityOrder[a.severity];
+    });
+  }, [filteredTrades, tradePlans, metrics, symbolPerformance]);
+
   const periods = [
     { id: 'all', label: 'All Time' },
     { id: 'quarter', label: 'Last 3M' },
@@ -279,9 +423,53 @@ export const Performance = (props) => {
           </div>
         </div>
 
-        {/* Performance Insights */}
+        {/* Behavioral Insights - The Bleeding Detector */}
+        {insights.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h3 className="font-semibold mb-3 flex items-center">
+              <AlertTriangle className="h-5 w-5 text-orange-500 mr-2" />
+              Trading Insights
+            </h3>
+            <div className="space-y-3">
+              {insights.slice(0, 3).map((insight, idx) => (
+                <div 
+                  key={idx} 
+                  className={`p-3 rounded-lg border-l-4 ${
+                    insight.type === 'warning' ? 'bg-red-50 border-red-400' :
+                    insight.type === 'success' ? 'bg-green-50 border-green-400' :
+                    'bg-blue-50 border-blue-400'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className={`font-medium text-sm ${
+                      insight.type === 'warning' ? 'text-red-800' :
+                      insight.type === 'success' ? 'text-green-800' :
+                      'text-blue-800'
+                    }`}>
+                      {insight.title}
+                    </h4>
+                    {insight.impact !== 'execution_quality' && (
+                      <span className="text-xs text-gray-500">
+                        ${insight.impact} impact
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-sm ${
+                    insight.type === 'warning' ? 'text-red-700' :
+                    insight.type === 'success' ? 'text-green-700' :
+                    'text-blue-700'
+                  }`}>
+                    {insight.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Performance Breakdown */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h3 className="font-semibold mb-3">Performance Insights</h3>
+          <h3 className="font-semibold mb-3">Performance Breakdown</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Average Win</span>
@@ -440,6 +628,74 @@ export const Performance = (props) => {
 
       {/* Charts and Analysis Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Behavioral Insights Section - The Bleeding Detector */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <Brain className="h-5 w-5 text-purple-600 mr-2" />
+            Trading Intelligence
+          </h3>
+          
+          {insights.length > 0 ? (
+            <div className="space-y-4">
+              {insights.map((insight, idx) => (
+                <div 
+                  key={idx} 
+                  className={`p-4 rounded-lg border-l-4 ${
+                    insight.type === 'warning' ? 'bg-red-50 border-red-400' :
+                    insight.type === 'success' ? 'bg-green-50 border-green-400' :
+                    'bg-blue-50 border-blue-400'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center space-x-2">
+                      {insight.type === 'warning' ? (
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      ) : insight.type === 'success' ? (
+                        <Award className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                      )}
+                      <h4 className={`font-medium ${
+                        insight.type === 'warning' ? 'text-red-800' :
+                        insight.type === 'success' ? 'text-green-800' :
+                        'text-blue-800'
+                      }`}>
+                        {insight.title}
+                      </h4>
+                    </div>
+                    {insight.impact !== 'execution_quality' && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        ${insight.impact} impact
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-sm leading-relaxed ${
+                    insight.type === 'warning' ? 'text-red-700' :
+                    insight.type === 'success' ? 'text-green-700' :
+                    'text-blue-700'
+                  }`}>
+                    {insight.message}
+                  </p>
+                  <div className="mt-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      insight.type === 'warning' ? 'bg-red-100 text-red-600' :
+                      insight.type === 'success' ? 'bg-green-100 text-green-600' :
+                      'bg-blue-100 text-blue-600'
+                    }`}>
+                      {insight.category}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Brain className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">Building insights...</p>
+              <p className="text-xs mt-1">More data needed for pattern analysis</p>
+            </div>
+          )}
+        </div>
         {/* Performance Breakdown */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-4">Performance Breakdown</h3>
