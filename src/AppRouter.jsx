@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTradingState } from './hooks/useTradingState';
-import { Dashboard, PlanTrader, SmartJournal, Notes, Performance } from './components/views';
+import { Dashboard, PlanTrader, SmartJournal, Notes, Performance, DailyView } from './components/views';
 import { DesktopAdapter, MobileAdapter } from './components/adapters';
 import { useIsMobile } from './hooks/useIsMobile';
 
@@ -24,8 +24,9 @@ function AppRouter() {
       case 'smart-journal':
         return <SmartJournal {...moduleProps} />;
       case 'performance':
-      case 'daily-view':
         return <Performance {...moduleProps} />;
+      case 'daily-view':
+        return <DailyView {...moduleProps} />;
       default:
         return <Dashboard {...moduleProps} />;
     }
