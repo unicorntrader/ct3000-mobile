@@ -157,14 +157,233 @@ export const Performance = (props) => {
     return Object.values(dailyStats).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredTrades]);
 
-  // BLEEDING DETECTOR - Key behavioral insights
+// BLEEDING DETECTOR - Advanced behavioral insights engine
   const insights = useMemo(() => {
     const insights = [];
     
-    if (filteredTrades.length < 5) return insights; // Need minimum data
+    if (filteredTrades.length < 8) return [{
+      type: 'info',
+      category: 'Data Requirements',
+      title: 'Building Intelligence Profile',
+      message: `Analyzing ${filteredTrades.length} trades. Need 8+ trades for full behavioral analysis.`,
+      severity: 'low',
+      impact: 'building'
+    }];
     
-    // 1. SIZE DISCIPLINE ANALYSIS
-    // Group trades by position size (if quantity data exists)
+    // 1. STRATEGY ADHERENCE VS VIBE TRADING ANALYSIS
+    // Categorize trades by strategy discipline level
+    const disciplinedTrades = filteredTrades.filter(t => {
+      // High discipline indicators: consistent size, planned entries, stop losses used
+      const consistentSize = Math.abs(t.quantity - 75) <= 25; // Around median size
+      const reasonableHoldTime = new Date(t.timestamp).getHours() >= 9; // Not impulsive
+      return consistentSize && reasonableHoldTime;
+    });
+    
+    const vibeTrades = filteredTrades.filter(t => {
+      // Vibe trading indicators: unusual sizes, off-hours, emotional sizing
+      const unusualSize = t.quantity > 150 || t.quantity < 25;
+      const offHours = new Date(t.timestamp).getHours() < 9 || new Date(t.timestamp).getHours() > 15;
+      return unusualSize || offHours;
+    });
+    
+    if (disciplinedTrades.length >= 3 && vibeTrades.length >= 3) {
+      const disciplinedWinRate = (disciplinedTrades.filter(t => t.outcome === 'win').length / disciplinedTrades.length) * 100;
+      const vibeWinRate = (vibeTrades.filter(t => t.outcome === 'win').length / vibeTrades.length) * 100;
+      const disciplinedAvgPnL = disciplinedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / disciplinedTrades.length;
+      const vibeAvgPnL = vibeTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / vibeTrades.length;
+      
+      if (disciplinedWinRate > vibeWinRate + 15) {
+        insights.push({
+          type: 'warning',
+          category: 'Strategy Discipline',
+          title: 'Vibe Trading Performance Gap',
+          message: `Disciplined trades: ${disciplinedWinRate.toFixed(0)}% win rate, $${disciplinedAvgPnL.toFixed(0)} avg. Vibe trades: ${vibeWinRate.toFixed(0)}% win rate, $${vibeAvgPnL.toFixed(0)} avg. Your edge weakens when deviating from process.`,
+          severity: 'high',
+          impact: Math.abs((disciplinedAvgPnL - vibeAvgPnL) * vibeTrades.length).toFixed(0)
+        });
+      } else if (vibeAvgPnL > disciplinedAvgPnL + 50) {
+        insights.push({
+          type: 'success',
+          category: 'Intuitive Edge',
+          title: 'Strong Intuitive Trading',
+          message: `Your "vibe" trades (${vibeTrades.length}) actually outperform structured trades: $${vibeAvgPnL.toFixed(0)} vs $${disciplinedAvgPnL.toFixed(0)} average. Trust your instincts more.`,
+          severity: 'positive',
+          impact: ((vibeAvgPnL - disciplinedAvgPnL) * vibeTrades.length).toFixed(0)
+        });
+      }
+    }
+    
+    // 2. PLAN DEVIATION ANALYSIS - Compare with trade plans
+    const executedPlans = tradePlans.filter(plan => 
+      filteredTrades.some(trade => trade.ticker === plan.ticker && 
+        Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
+    );
+    
+    if (executedPlans.length >= 3) {
+      let totalDrift = 0;
+      let driftCount = 0;
+      let planTradePnL = 0;
+      
+      executedPlans.forEach(plan => {
+        const matchingTrade = filteredTrades.find(trade => 
+          trade.ticker === plan.ticker && 
+          Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000
+        );
+        
+        if (matchingTrade) {
+          const entryDrift = Math.abs(parseFloat(plan.entry) - matchingTrade.entry);
+          const driftPercent = (entryDrift / parseFloat(plan.entry)) * 100;
+          
+          if (driftPercent > 1) {
+            totalDrift += driftPercent;
+            driftCount++;
+          }
+          planTradePnL += matchingTrade.pnl || 0;
+        }
+      });
+      
+      const avgDrift = driftCount > 0 ? totalDrift / driftCount : 0;
+      const avgPlanPnL = planTradePnL / executedPlans.length;
+      
+      // Compare plan-based vs non-plan trades
+      const nonPlanTrades = filteredTrades.filter(trade => 
+        !executedPlans.some(plan => trade.ticker === plan.ticker && 
+          Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
+      );
+      
+      if (nonPlanTrades.length >= 3) {
+        const nonPlanAvgPnL = nonPlanTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / nonPlanTrades.length;
+        
+        if (avgPlanPnL > nonPlanAvgPnL + 30) {
+          insights.push({
+            type: 'success',
+            category: 'Planning Edge',
+            title: 'Pre-Market Planning Advantage',
+            message: `Planned trades (${executedPlans.length}) average $${avgPlanPnL.toFixed(0)} vs spontaneous trades $${nonPlanAvgPnL.toFixed(0)}. Your edge is strongest with preparation.`,
+            severity: 'positive',
+            impact: ((avgPlanPnL - nonPlanAvgPnL) * executedPlans.length).toFixed(0)
+          });
+        } else if (nonPlanAvgPnL > avgPlanPnL + 30) {
+          insights.push({
+            type: 'warning',
+            category: 'Over-Planning',
+            title: 'Spontaneous Trade Outperformance',
+            message: `Unplanned trades (${nonPlanTrades.length}) average $${nonPlanAvgPnL.toFixed(0)} vs planned trades $${avgPlanPnL.toFixed(0)}. Your plans may be constraining natural edge.`,
+            severity: 'medium',
+            impact: Math.abs((avgPlanPnL - nonPlanAvgPnL) * executedPlans.length).toFixed(0)
+          });
+        }
+      }
+      
+      if (avgDrift > 2 && driftCount >= 2) {
+        insights.push({
+          type: 'warning',
+          category: 'Execution Discipline',
+          title: 'Systematic Entry Drift',
+          message: `Average ${avgDrift.toFixed(1)}% drift from planned entries across ${driftCount} trades. Market timing or order execution needs attention.`,
+          severity: 'medium',
+          impact: 'execution_quality'
+        });
+      }
+    }
+    
+    // 3. EMOTIONAL STATE PATTERN DETECTION
+    // Analyze consecutive wins/losses for tilt detection
+    let consecutiveLosses = 0;
+    let maxLossStreak = 0;
+    let tradesAfterLosses = [];
+    
+    filteredTrades.forEach((trade, index) => {
+      if (trade.outcome === 'loss') {
+        consecutiveLosses++;
+        maxLossStreak = Math.max(maxLossStreak, consecutiveLosses);
+      } else {
+        if (consecutiveLosses >= 2 && index < filteredTrades.length - 1) {
+          // Track trade after loss streak
+          tradesAfterLosses.push(filteredTrades[index + 1]);
+        }
+        consecutiveLosses = 0;
+      }
+    });
+    
+    if (tradesAfterLosses.length >= 3) {
+      const bounceBackWinRate = (tradesAfterLosses.filter(t => t && t.outcome === 'win').length / tradesAfterLosses.length) * 100;
+      const bounceBackAvgSize = tradesAfterLosses.reduce((sum, t) => sum + (t ? t.quantity : 0), 0) / tradesAfterLosses.length;
+      const normalAvgSize = filteredTrades.reduce((sum, t) => sum + t.quantity, 0) / filteredTrades.length;
+      
+      if (bounceBackWinRate < 40) {
+        insights.push({
+          type: 'warning',
+          category: 'Emotional Resilience',
+          title: 'Post-Loss Streak Performance',
+          message: `After loss streaks, next trade wins only ${bounceBackWinRate.toFixed(0)}% of the time (${tradesAfterLosses.length} instances). Consider cooling-off periods.`,
+          severity: 'high',
+          impact: Math.abs(tradesAfterLosses.reduce((sum, t) => sum + (t ? t.pnl || 0 : 0), 0)).toFixed(0)
+        });
+      }
+      
+      if (bounceBackAvgSize > normalAvgSize * 1.3) {
+        insights.push({
+          type: 'warning',
+          category: 'Revenge Trading',
+          title: 'Position Size Inflation After Losses',
+          message: `Average position size increases ${((bounceBackAvgSize / normalAvgSize - 1) * 100).toFixed(0)}% after loss streaks. Revenge trading detected.`,
+          severity: 'high',
+          impact: 'risk_management'
+        });
+      }
+    }
+    
+    // 4. TIME-BASED EDGE ANALYSIS
+    const timeGroups = {
+      morning: filteredTrades.filter(t => {
+        const hour = new Date(t.timestamp).getHours();
+        return hour >= 9 && hour < 11;
+      }),
+      midday: filteredTrades.filter(t => {
+        const hour = new Date(t.timestamp).getHours();
+        return hour >= 11 && hour < 14;
+      }),
+      afternoon: filteredTrades.filter(t => {
+        const hour = new Date(t.timestamp).getHours();
+        return hour >= 14 && hour <= 16;
+      })
+    };
+    
+    let bestSession = null;
+    let bestSessionWinRate = 0;
+    let worstSession = null;
+    let worstSessionWinRate = 100;
+    
+    Object.entries(timeGroups).forEach(([session, trades]) => {
+      if (trades.length >= 3) {
+        const winRate = (trades.filter(t => t.outcome === 'win').length / trades.length) * 100;
+        const avgPnL = trades.reduce((sum, t) => sum + (t.pnl || 0), 0) / trades.length;
+        
+        if (winRate > bestSessionWinRate) {
+          bestSessionWinRate = winRate;
+          bestSession = { name: session, winRate, avgPnL, count: trades.length };
+        }
+        
+        if (winRate < worstSessionWinRate) {
+          worstSessionWinRate = winRate;
+          worstSession = { name: session, winRate, avgPnL, count: trades.length };
+        }
+      }
+    });
+    
+    if (bestSession && worstSession && bestSession.winRate > worstSession.winRate + 20) {
+      insights.push({
+        type: 'success',
+        category: 'Timing Edge',
+        title: 'Session Performance Advantage',
+        message: `${bestSession.name.charAt(0).toUpperCase() + bestSession.name.slice(1)} trading shows ${bestSession.winRate.toFixed(0)}% win rate (${bestSession.count} trades) vs ${worstSession.name} at ${worstSession.winRate.toFixed(0)}%. Focus energy when you're sharpest.`,
+        severity: 'positive',
+        impact: ((bestSession.avgPnL - worstSession.avgPnL) * Math.min(bestSession.count, worstSession.count)).toFixed(0)
+      });
+    }
+    
+    // 5. SIZE DISCIPLINE WITH DEEPER ANALYSIS
     const sizeGroups = {
       small: filteredTrades.filter(t => t.quantity <= 50),
       medium: filteredTrades.filter(t => t.quantity > 50 && t.quantity <= 100),
@@ -181,125 +400,24 @@ export const Performance = (props) => {
             type: 'warning',
             category: 'Size Discipline',
             title: 'Large Position Underperformance',
-            message: `Your larger positions (${trades.length} trades) show ${winRate.toFixed(0)}% win rate vs smaller positions. Consider position sizing impact.`,
+            message: `Large positions (${trades.length} trades) show ${winRate.toFixed(0)}% win rate, $${avgPnL.toFixed(0)} average. Size may be compromising decision quality.`,
             severity: 'medium',
             impact: Math.abs(avgPnL * trades.length).toFixed(0)
           });
         }
-      }
-    });
-    
-    // 2. RISK/REWARD PATTERN ANALYSIS
-    // Calculate R/R for trades and group by performance
-    const tradesWithRR = filteredTrades.filter(t => t.entry && t.exitPrice && t.pnl);
-    if (tradesWithRR.length >= 5) {
-      const lowRRTrades = tradesWithRR.filter(t => {
-        const risk = Math.abs(t.entry - (t.stopLoss || t.entry * 0.95));
-        const reward = Math.abs(t.exitPrice - t.entry);
-        const rrRatio = reward / risk;
-        return rrRatio < 1.5;
-      });
-      
-      if (lowRRTrades.length >= 3) {
-        const lowRRWinRate = (lowRRTrades.filter(t => t.outcome === 'win').length / lowRRTrades.length) * 100;
-        const lowRRPnL = lowRRTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
         
-        if (lowRRWinRate < 65 || lowRRPnL < 0) {
+        if (size === 'small' && avgPnL > 100 && winRate > 70) {
           insights.push({
-            type: 'warning',
-            category: 'Risk Management',
-            title: 'Low Risk/Reward Setup Pattern',
-            message: `${lowRRTrades.length} trades with poor risk/reward ratios show ${lowRRWinRate.toFixed(0)}% win rate. These setups may need higher win rates to be profitable.`,
-            severity: 'high',
-            impact: Math.abs(lowRRPnL).toFixed(0)
+            type: 'success',
+            category: 'Optimal Sizing',
+            title: 'Small Position Excellence',
+            message: `Small positions (${trades.length} trades) deliver ${winRate.toFixed(0)}% win rate, $${avgPnL.toFixed(0)} average. This size optimizes your performance.`,
+            severity: 'positive',
+            impact: (avgPnL * trades.length).toFixed(0)
           });
         }
       }
-    }
-    
-    // 3. PROFIT MANAGEMENT ANALYSIS
-    // Compare winning vs losing trade holding patterns
-    const winners = filteredTrades.filter(t => t.outcome === 'win' && t.pnl > 0);
-    const losers = filteredTrades.filter(t => t.outcome === 'loss' && t.pnl < 0);
-    
-    if (winners.length >= 3 && losers.length >= 3) {
-      const avgWinAmount = winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length;
-      const avgLossAmount = Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length);
-      
-      // Check if cutting winners too early vs letting losers run
-      if (avgLossAmount > avgWinAmount * 1.5) {
-        insights.push({
-          type: 'info',
-          category: 'Profit Management', 
-          title: 'Winner vs Loser Size Imbalance',
-          message: `Average loss (${avgLossAmount.toFixed(0)}) is ${(avgLossAmount/avgWinAmount).toFixed(1)}x larger than average win (${avgWinAmount.toFixed(0)}). Consider letting winners run longer.`,
-          severity: 'medium',
-          impact: ((avgLossAmount - avgWinAmount) * Math.min(winners.length, losers.length)).toFixed(0)
-        });
-      }
-    }
-    
-    // 4. EXECUTION DRIFT ANALYSIS 
-    // Check for systematic entry price drift from planned levels
-    const plansWithExecutions = tradePlans.filter(plan => 
-      filteredTrades.some(trade => trade.ticker === plan.ticker && Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
-    );
-    
-    if (plansWithExecutions.length >= 3) {
-      let totalDrift = 0;
-      let driftCount = 0;
-      
-      plansWithExecutions.forEach(plan => {
-        const matchingTrade = filteredTrades.find(trade => 
-          trade.ticker === plan.ticker && 
-          Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000
-        );
-        
-        if (matchingTrade) {
-          const drift = Math.abs(parseFloat(plan.entry) - matchingTrade.entry);
-          const driftPercent = (drift / parseFloat(plan.entry)) * 100;
-          
-          if (driftPercent > 2) { // More than 2% drift
-            totalDrift += driftPercent;
-            driftCount++;
-          }
-        }
-      });
-      
-      if (driftCount >= 2) {
-        const avgDrift = totalDrift / driftCount;
-        insights.push({
-          type: 'info',
-          category: 'Execution Quality',
-          title: 'Plan vs Execution Drift',
-          message: `${driftCount} trades show significant entry price drift (avg ${avgDrift.toFixed(1)}% from plan). Market timing or order management may need attention.`,
-          severity: 'low',
-          impact: 'execution_quality'
-        });
-      }
-    }
-    
-    // 5. POSITIVE PATTERN RECOGNITION
-    // Find what's actually working well
-    if (metrics.winRate > 60 && metrics.totalTrades >= 5) {
-      const bestSymbol = symbolPerformance[0];
-      if (bestSymbol && bestSymbol.winRate > 70) {
-        insights.push({
-          type: 'success',
-          category: 'Strength Recognition',
-          title: 'Strong Symbol Performance',
-          message: `${bestSymbol.symbol} shows exceptional performance: ${bestSymbol.winRate.toFixed(0)}% win rate across ${bestSymbol.trades} trades. This edge is worth exploring further.`,
-          severity: 'positive',
-          impact: bestSymbol.pnl.toFixed(0)
-        });
-      }
-    }
-    
-    return insights.sort((a, b) => {
-      const severityOrder = { high: 3, medium: 2, low: 1, positive: 0 };
-      return severityOrder[b.severity] - severityOrder[a.severity];
     });
-  }, [filteredTrades, tradePlans, metrics, symbolPerformance]);
 
   const periods = [
     { id: 'all', label: 'All Time' },
