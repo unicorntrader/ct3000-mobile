@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import {
   DollarSign,
@@ -157,7 +156,7 @@ export const Performance = (props) => {
     return Object.values(dailyStats).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [filteredTrades]);
 
-// BLEEDING DETECTOR - Advanced behavioral insights engine
+  // BLEEDING DETECTOR - Advanced behavioral insights engine
   const insights = useMemo(() => {
     const insights = [];
     
@@ -171,16 +170,13 @@ export const Performance = (props) => {
     }];
     
     // 1. STRATEGY ADHERENCE VS VIBE TRADING ANALYSIS
-    // Categorize trades by strategy discipline level
     const disciplinedTrades = filteredTrades.filter(t => {
-      // High discipline indicators: consistent size, planned entries, stop losses used
-      const consistentSize = Math.abs(t.quantity - 75) <= 25; // Around median size
-      const reasonableHoldTime = new Date(t.timestamp).getHours() >= 9; // Not impulsive
+      const consistentSize = Math.abs(t.quantity - 75) <= 25;
+      const reasonableHoldTime = new Date(t.timestamp).getHours() >= 9;
       return consistentSize && reasonableHoldTime;
     });
     
     const vibeTrades = filteredTrades.filter(t => {
-      // Vibe trading indicators: unusual sizes, off-hours, emotional sizing
       const unusualSize = t.quantity > 150 || t.quantity < 25;
       const offHours = new Date(t.timestamp).getHours() < 9 || new Date(t.timestamp).getHours() > 15;
       return unusualSize || offHours;
@@ -213,7 +209,7 @@ export const Performance = (props) => {
       }
     }
     
-    // 2. PLAN DEVIATION ANALYSIS - Compare with trade plans
+    // 2. PLAN DEVIATION ANALYSIS
     const executedPlans = tradePlans.filter(plan => 
       filteredTrades.some(trade => trade.ticker === plan.ticker && 
         Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
@@ -245,7 +241,6 @@ export const Performance = (props) => {
       const avgDrift = driftCount > 0 ? totalDrift / driftCount : 0;
       const avgPlanPnL = planTradePnL / executedPlans.length;
       
-      // Compare plan-based vs non-plan trades
       const nonPlanTrades = filteredTrades.filter(trade => 
         !executedPlans.some(plan => trade.ticker === plan.ticker && 
           Math.abs(new Date(trade.timestamp) - new Date(plan.timestamp)) < 24*60*60*1000)
@@ -288,7 +283,6 @@ export const Performance = (props) => {
     }
     
     // 3. EMOTIONAL STATE PATTERN DETECTION
-    // Analyze consecutive wins/losses for tilt detection
     let consecutiveLosses = 0;
     let maxLossStreak = 0;
     let tradesAfterLosses = [];
@@ -299,7 +293,6 @@ export const Performance = (props) => {
         maxLossStreak = Math.max(maxLossStreak, consecutiveLosses);
       } else {
         if (consecutiveLosses >= 2 && index < filteredTrades.length - 1) {
-          // Track trade after loss streak
           tradesAfterLosses.push(filteredTrades[index + 1]);
         }
         consecutiveLosses = 0;
@@ -383,7 +376,7 @@ export const Performance = (props) => {
       });
     }
     
-    // 5. SIZE DISCIPLINE WITH DEEPER ANALYSIS
+    // 5. SIZE DISCIPLINE ANALYSIS
     const sizeGroups = {
       small: filteredTrades.filter(t => t.quantity <= 50),
       medium: filteredTrades.filter(t => t.quantity > 50 && t.quantity <= 100),
@@ -418,6 +411,200 @@ export const Performance = (props) => {
         }
       }
     });
+    
+    // 6. SYMBOL MASTERY ANALYSIS
+    const symbolStats = {};
+    filteredTrades.forEach(trade => {
+      if (!symbolStats[trade.ticker]) {
+        symbolStats[trade.ticker] = {
+          symbol: trade.ticker,
+          trades: 0,
+          pnl: 0,
+          wins: 0,
+          losses: 0,
+          totalRisk: 0
+        };
+      }
+      
+      symbolStats[trade.ticker].trades++;
+      symbolStats[trade.ticker].pnl += trade.pnl || 0;
+      symbolStats[trade.ticker].totalRisk += trade.quantity * trade.entry;
+      
+      if (trade.outcome === 'win') {
+        symbolStats[trade.ticker].wins++;
+      } else if (trade.outcome === 'loss') {
+        symbolStats[trade.ticker].losses++;
+      }
+    });
+    
+    const symbolAnalysis = Object.values(symbolStats)
+      .filter(stat => stat.trades >= 3)
+      .map(stat => ({
+        ...stat,
+        winRate: (stat.wins / stat.trades) * 100,
+        avgPnL: stat.pnl / stat.trades,
+        roi: (stat.pnl / stat.totalRisk) * 100
+      }))
+      .sort((a, b) => b.winRate - a.winRate);
+    
+    if (symbolAnalysis.length >= 2) {
+      const bestSymbol = symbolAnalysis[0];
+      const worstSymbol = symbolAnalysis[symbolAnalysis.length - 1];
+      
+      if (bestSymbol.winRate > 70 && bestSymbol.pnl > 200) {
+        insights.push({
+          type: 'success',
+          category: 'Symbol Mastery',
+          title: `${bestSymbol.symbol} Specialization Edge`,
+          message: `${bestSymbol.symbol}: ${bestSymbol.winRate.toFixed(0)}% win rate across ${bestSymbol.trades} trades, $${bestSymbol.pnl.toFixed(0)} total P&L. You've developed genuine edge here.`,
+          severity: 'positive',
+          impact: bestSymbol.pnl.toFixed(0)
+        });
+      }
+      
+      if (worstSymbol.winRate < 40 && worstSymbol.losses >= 2) {
+        insights.push({
+          type: 'warning',
+          category: 'Symbol Avoidance',
+          title: `${worstSymbol.symbol} Consistent Underperformance`,
+          message: `${worstSymbol.symbol}: ${worstSymbol.winRate.toFixed(0)}% win rate, $${worstSymbol.avgPnL.toFixed(0)} average P&L across ${worstSymbol.trades} trades. Consider avoiding or changing approach.`,
+          severity: 'medium',
+          impact: Math.abs(worstSymbol.pnl).toFixed(0)
+        });
+      }
+    }
+    
+    // 7. RISK/REWARD SOPHISTICATION
+    const tradesWithRR = filteredTrades.filter(t => t.entry && t.exitPrice && t.pnl);
+    if (tradesWithRR.length >= 5) {
+      const rrAnalysis = tradesWithRR.map(t => {
+        const risk = Math.abs(t.entry * 0.05);
+        const reward = Math.abs(t.exitPrice - t.entry);
+        const rrRatio = reward / risk;
+        return { ...t, rrRatio, actualR: t.pnl / risk };
+      });
+      
+      const lowRRTrades = rrAnalysis.filter(t => t.rrRatio < 1.5);
+      const highRRTrades = rrAnalysis.filter(t => t.rrRatio >= 2.0);
+      
+      if (lowRRTrades.length >= 3) {
+        const lowRRWinRate = (lowRRTrades.filter(t => t.outcome === 'win').length / lowRRTrades.length) * 100;
+        const lowRRPnL = lowRRTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+        
+        if (lowRRWinRate < 65 || lowRRPnL < 0) {
+          insights.push({
+            type: 'warning',
+            category: 'Risk Management',
+            title: 'Low Risk/Reward Setup Bleeding',
+            message: `${lowRRTrades.length} trades with poor risk/reward ratios show ${lowRRWinRate.toFixed(0)}% win rate, $${lowRRPnL.toFixed(0)} total P&L. These setups need 65%+ win rates to be profitable.`,
+            severity: 'high',
+            impact: Math.abs(lowRRPnL).toFixed(0)
+          });
+        }
+      }
+      
+      if (highRRTrades.length >= 3) {
+        const highRRWinRate = (highRRTrades.filter(t => t.outcome === 'win').length / highRRTrades.length) * 100;
+        const highRRPnL = highRRTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+        
+        if (highRRWinRate >= 45 && highRRPnL > 0) {
+          insights.push({
+            type: 'success',
+            category: 'Setup Selection',
+            title: 'High Risk/Reward Setup Mastery',
+            message: `${highRRTrades.length} high R/R trades show ${highRRWinRate.toFixed(0)}% win rate, $${highRRPnL.toFixed(0)} total P&L. These quality setups are your edge.`,
+            severity: 'positive',
+            impact: highRRPnL.toFixed(0)
+          });
+        }
+      }
+    }
+    
+    // 8. PROFIT TAKING VS LOSS CUTTING ANALYSIS
+    const winners = filteredTrades.filter(t => t.outcome === 'win' && t.pnl > 0);
+    const losers = filteredTrades.filter(t => t.outcome === 'loss' && t.pnl < 0);
+    
+    if (winners.length >= 3 && losers.length >= 3) {
+      const avgWinAmount = winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length;
+      const avgLossAmount = Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length);
+      const winLossRatio = avgWinAmount / avgLossAmount;
+      
+      if (avgLossAmount > avgWinAmount * 1.5) {
+        insights.push({
+          type: 'warning',
+          category: 'Profit Management', 
+          title: 'Classic "Cut Winners, Let Losers Run"',
+          message: `Average loss ($${avgLossAmount.toFixed(0)}) is ${(avgLossAmount/avgWinAmount).toFixed(1)}x larger than average win ($${avgWinAmount.toFixed(0)}). Letting losers run while cutting winners early.`,
+          severity: 'high',
+          impact: ((avgLossAmount - avgWinAmount) * Math.min(winners.length, losers.length)).toFixed(0)
+        });
+      }
+      
+      if (winLossRatio >= 2.0) {
+        insights.push({
+          type: 'success',
+          category: 'Profit Management',
+          title: 'Excellent Winner/Loser Ratio',
+          message: `Average win ($${avgWinAmount.toFixed(0)}) is ${winLossRatio.toFixed(1)}x average loss ($${avgLossAmount.toFixed(0)}). Strong profit-taking discipline.`,
+          severity: 'positive',
+          impact: ((avgWinAmount - avgLossAmount) * Math.min(winners.length, losers.length)).toFixed(0)
+        });
+      }
+    }
+    
+    // 9. MARKET CONDITION ADAPTATION
+    let trendingUpDays = 0;
+    let trendingDownDays = 0;
+    let currentDayPnL = 0;
+    let lastDate = null;
+    
+    filteredTrades.forEach(trade => {
+      const tradeDate = trade.timestamp.split('T')[0];
+      
+      if (lastDate !== tradeDate) {
+        if (currentDayPnL > 0) trendingUpDays++;
+        else if (currentDayPnL < 0) trendingDownDays++;
+        
+        currentDayPnL = trade.pnl || 0;
+        lastDate = tradeDate;
+      } else {
+        currentDayPnL += trade.pnl || 0;
+      }
+    });
+    
+    if (currentDayPnL > 0) trendingUpDays++;
+    else if (currentDayPnL < 0) trendingDownDays++;
+    
+    const totalDays = trendingUpDays + trendingDownDays;
+    if (totalDays >= 5) {
+      const upDayPercentage = (trendingUpDays / totalDays) * 100;
+      
+      if (upDayPercentage >= 70) {
+        insights.push({
+          type: 'success',
+          category: 'Consistency',
+          title: 'High Daily Win Rate',
+          message: `${trendingUpDays} profitable days out of ${totalDays} (${upDayPercentage.toFixed(0)}%). Strong daily consistency.`,
+          severity: 'positive',
+          impact: 'consistency'
+        });
+      } else if (upDayPercentage <= 40) {
+        insights.push({
+          type: 'warning',
+          category: 'Daily Consistency',
+          title: 'Low Daily Win Rate',
+          message: `Only ${trendingUpDays} profitable days out of ${totalDays} (${upDayPercentage.toFixed(0)}%). Focus on daily P&L management.`,
+          severity: 'medium',
+          impact: 'consistency'
+        });
+      }
+    }
+    
+    return insights.sort((a, b) => {
+      const severityOrder = { high: 3, medium: 2, low: 1, positive: 0 };
+      return severityOrder[b.severity] - severityOrder[a.severity];
+    });
+  }, [filteredTrades, tradePlans, metrics, symbolPerformance]);
 
   const periods = [
     { id: 'all', label: 'All Time' },
@@ -568,7 +755,7 @@ export const Performance = (props) => {
                     }`}>
                       {insight.title}
                     </h4>
-                    {insight.impact !== 'execution_quality' && (
+                    {insight.impact !== 'execution_quality' && insight.impact !== 'risk_management' && insight.impact !== 'consistency' && insight.impact !== 'building' && (
                       <span className="text-xs text-gray-500">
                         ${insight.impact} impact
                       </span>
@@ -783,7 +970,7 @@ export const Performance = (props) => {
                         {insight.title}
                       </h4>
                     </div>
-                    {insight.impact !== 'execution_quality' && (
+                    {insight.impact !== 'execution_quality' && insight.impact !== 'risk_management' && insight.impact !== 'consistency' && insight.impact !== 'building' && (
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                         ${insight.impact} impact
                       </span>
@@ -816,6 +1003,7 @@ export const Performance = (props) => {
             </div>
           )}
         </div>
+
         {/* Performance Breakdown */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-4">Performance Breakdown</h3>
