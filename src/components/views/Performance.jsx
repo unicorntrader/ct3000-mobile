@@ -15,12 +15,16 @@ import {
   AlertTriangle,
   Brain
 } from 'lucide-react';
+import { useDeepLinks } from '../../hooks/useDeepLinks';
 
 export const Performance = (props) => {
   const { trades, tradePlans, isMobile } = props;
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [selectedMetric, setSelectedMetric] = useState('pnl');
   const [showFilters, setShowFilters] = useState(false);
+
+  const { deepLinkParams } = useDeepLinks();
+  console.log('Deep link params in Performance:', deepLinkParams);
 
   // Filter trades by period
   const filteredTrades = useMemo(() => {
