@@ -25,31 +25,53 @@ export const Performance = (props) => {
 
   const { deepLinkParams } = useDeepLinks();
   console.log('Deep link params in Performance:', deepLinkParams);
+  const [symbolFilter, setSymbolFilter] = useState('');
+
+useEffect(() => {
+  if (deepLinkParams.filter === 'symbol' && deepLinkParams.highlight) {
+    setSymbolFilter(deepLinkParams.highlight);
+    console.log('Applied symbol filter:', deepLinkParams.highlight);
+  }
+}, [deepLinkParams]);
 
   // Filter trades by period
-  const filteredTrades = useMemo(() => {
-    const now = new Date();
-    const cutoffDate = new Date();
-    
-    switch (selectedPeriod) {
-      case 'week':
-        cutoffDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        cutoffDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        cutoffDate.setMonth(now.getMonth() - 3);
-        break;
-      default:
-        return trades;
-    }
-    
-    return trades.filter(trade => {
+const filteredTrades = useMemo(() => {
+  let filtered = trades;
+
+  // Time period filter
+  const now = new Date();
+  const cutoffDate = new Date();
+  
+  switch (selectedPeriod) {
+    case 'week':
+      cutoffDate.setDate(now.getDate() - 7);
+      break;
+    case 'month':
+      cutoffDate.setMonth(now.getMonth() - 1);
+      break;
+    case 'quarter':
+      cutoffDate.setMonth(now.getMonth() - 3);
+      break;
+    default:
+      break;
+  }
+  
+  if (selectedPeriod !== 'all') {
+    filtered = filtered.filter(trade => {
       const tradeDate = new Date(trade.timestamp);
       return tradeDate >= cutoffDate;
     });
-  }, [trades, selectedPeriod]);
+  }
+
+  // Symbol filter (from deep links)
+  if (symbolFilter) {
+    filtered = filtered.filter(trade => 
+      trade.ticker.toLowerCase().includes(symbolFilter.toLowerCase())
+    );
+  }
+
+  return filtered;
+}, [trades, selectedPeriod, symbolFilter]);
 
   // Calculate comprehensive metrics
   const metrics = useMemo(() => {
