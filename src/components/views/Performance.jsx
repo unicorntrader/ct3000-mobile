@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import {
+import React, { useState, useMemo, useEffect } from 'react';import {
   DollarSign,
   TrendingUp,
   TrendingDown,
