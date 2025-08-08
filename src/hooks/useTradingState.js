@@ -13,6 +13,8 @@ export const useTradingState = () => {
   const [trades, setTrades] = useState(sampleData.trades);
   const [notes, setNotes] = useState(sampleData.notes);
   const [activities, setActivities] = useState(sampleData.activities);
+  
+  // ✅ UPDATED newPlan state with strategy field
   const [newPlan, setNewPlan] = useState({
     ticker: '',
     entry: '',
@@ -21,7 +23,7 @@ export const useTradingState = () => {
     position: 'long',
     quantity: '',
     notes: '',
-    strategy: [] // Added strategy tags array
+    strategy: '' // Changed from array to string for strategy selector
   });
 
   // ALL business logic in one place
@@ -50,7 +52,8 @@ export const useTradingState = () => {
   };
 
   const addTradePlan = () => {
-    if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss && newPlan.strategy && newPlan.strategy.length > 0) {
+    // ✅ UPDATED validation to include strategy
+    if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss && newPlan.quantity && newPlan.strategy) {
       const plan = {
         id: Date.now(),
         ...newPlan,
@@ -58,6 +61,8 @@ export const useTradingState = () => {
         status: 'planned'
       };
       setTradePlans([...tradePlans, plan]);
+      
+      // ✅ UPDATED reset to include strategy field
       setNewPlan({
         ticker: '',
         entry: '',
@@ -66,7 +71,7 @@ export const useTradingState = () => {
         position: 'long',
         quantity: '',
         notes: '',
-        strategy: [] // Reset strategy tags
+        strategy: '' // Reset strategy field properly
       });
     }
   };
@@ -80,14 +85,16 @@ export const useTradingState = () => {
     if (plan) {
       const trade = {
         id: Date.now(),
-        ...plan,
-        executeTime: new Date().toISOString(),
+        ticker: plan.ticker, // Use ticker instead of spreading plan
+        entry: parseFloat(plan.entry),
+        exitPrice: parseFloat(plan.target) + (Math.random() - 0.5) * 10,
+        quantity: parseInt(plan.quantity),
+        timestamp: new Date().toISOString(),
         status: 'executed',
         pnl: Math.random() > 0.5 ? Math.random() * 500 : -Math.random() * 200,
         outcome: Math.random() > 0.5 ? 'win' : 'loss',
-        exitPrice: parseFloat(plan.target) + (Math.random() - 0.5) * 10,
-        // Strategy tags will be carried over from the plan
-        strategy: plan.strategy || []
+        // ✅ CARRY OVER strategy from plan to trade for better insights
+        strategy: plan.strategy || 'unassigned'
       };
       setTrades([...trades, trade]);
       setTradePlans(tradePlans.map(p => 
@@ -124,7 +131,33 @@ export const useTradingState = () => {
     todayTrades: trades.filter(t => t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])),
     winRate: trades.length > 0 ? ((trades.filter(t => t.outcome === 'win').length / trades.length) * 100).toFixed(1) : 0,
     recentActivities: activities.slice(0, 6),
-    recentPlans: tradePlans.slice(-5)
+    recentPlans: tradePlans.slice(-5),
+    // ✅ NEW: Strategy performance analysis for insights
+    strategyPerformance: () => {
+      const strategyStats = {};
+      trades.forEach(trade => {
+        const strategy = trade.strategy || 'unassigned';
+        if (!strategyStats[strategy]) {
+          strategyStats[strategy] = {
+            strategy,
+            trades: 0,
+            wins: 0,
+            totalPnL: 0
+          };
+        }
+        strategyStats[strategy].trades++;
+        strategyStats[strategy].totalPnL += trade.pnl || 0;
+        if (trade.outcome === 'win') {
+          strategyStats[strategy].wins++;
+        }
+      });
+      
+      return Object.values(strategyStats).map(stat => ({
+        ...stat,
+        winRate: stat.trades > 0 ? (stat.wins / stat.trades) * 100 : 0,
+        avgPnL: stat.trades > 0 ? stat.totalPnL / stat.trades : 0
+      }));
+    }
   };
 
   // Return EVERYTHING the UI needs
