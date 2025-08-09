@@ -2,13 +2,11 @@
 import React, { useEffect } from 'react';
 import { useTradingState } from './hooks/useTradingState';
 import { useDeepLinks } from './hooks/useDeepLinks';
-import { Dashboard, PlanTrader, SmartJournal, Notes, Performance, DailyView } from './components/views';
-import { DesktopAdapter, MobileAdapter } from './components/adapters';
-import { useIsMobile } from './hooks/useIsMobile';
+import { Dashboard, PlanTrader, SmartJournal, Notes, Performance, DailyView, Intelligence } from './components/views';
+import { MobileAdapter } from './components/adapters';
 
 function AppRouter() {
   const tradingState = useTradingState();
-  const isMobile = useIsMobile();
   const { deepLinkParams, shouldAutoApply } = useDeepLinks();
 
   // Handle deep link module navigation
@@ -23,7 +21,8 @@ function AppRouter() {
         'notes': 'notebook',
         'plans': 'plan-trader',
         'dashboard': 'dashboard',
-        'daily': 'daily-view'
+        'daily': 'daily-view',
+        'intelligence': 'intelligence'
       };
       
       const targetModule = moduleMapping[deepLinkParams.module] || deepLinkParams.module;
@@ -82,6 +81,8 @@ function AppRouter() {
       case 'trades':
       case 'smart-journal':
         return <SmartJournal {...moduleProps} />;
+      case 'intelligence':
+        return <Intelligence {...moduleProps} />;
       case 'performance':
         return <Performance {...moduleProps} />;
       case 'daily-view':
@@ -91,7 +92,7 @@ function AppRouter() {
     }
   };
 
-return <UnifiedAdapter {...tradingState}>{(props) => renderActiveModule(props)}</UnifiedAdapter>
-
+  return <MobileAdapter {...tradingState}>{(props) => renderActiveModule(props)}</MobileAdapter>;
+}
 
 export default AppRouter;
