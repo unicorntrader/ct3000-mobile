@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useTradingState } from './hooks/useTradingState';
 import { useDeepLinks } from './hooks/useDeepLinks';
 import { Dashboard, PlanTrader, SmartJournal, Notes, Performance, DailyView, Intelligence } from './components/views';
-import { MobileAdapter } from './components/adapters';
+import { UnifiedAdapter } from './components/adapters';
 
 function AppRouter() {
   const tradingState = useTradingState();
@@ -92,7 +92,7 @@ function AppRouter() {
     }
   };
 
-  return <MobileAdapter {...tradingState}>{(props) => renderActiveModule(props)}</MobileAdapter>;
+  return <UnifiedAdapter {...tradingState}>{(props) => renderActiveModule(props)}</MobileAdapter>;
 }
 
 export default AppRouter;
