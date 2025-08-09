@@ -4,16 +4,13 @@ import {
   Upload,
   FileText,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Award,
   Target,
-  Clock,
   DollarSign,
   Activity,
   BarChart3,
   Zap,
-  Eye,
   Download,
   X,
   ChevronDown,
@@ -37,103 +34,92 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
     { id: 4, ticker: 'TSLA', entry: 250, exit: 245, quantity: 200, pnl: -1000, outcome: 'loss', timestamp: '2025-01-16T11:00:00Z', planned: false, strategy: null },
     { id: 5, ticker: 'GOOGL', entry: 135, exit: 142, quantity: 25, pnl: 175, outcome: 'win', timestamp: '2025-01-17T10:15:00Z', planned: true, strategy: 'breakout' },
     
-    // R/R examples
-    { id: 6, ticker: 'META', entry: 320, exit: 325, quantity: 75, pnl: 375, outcome: 'win', timestamp: '2025-01-17T13:20:00Z', planned: true, strategy: 'momentum', riskReward: 2.5 },
-    { id: 7, ticker: 'AMD', entry: 145, exit: 142, quantity: 100, pnl: -300, outcome: 'loss', timestamp: '2025-01-18T09:30:00Z', planned: true, strategy: 'breakout', riskReward: 0.8 },
-    
-    // Plan adherence examples  
-    { id: 8, ticker: 'SPY', entry: 455, exit: 458, quantity: 80, pnl: 240, outcome: 'win', timestamp: '2025-01-18T10:45:00Z', planned: true, strategy: 'momentum', plannedExit: 460, exitType: 'early' },
-    { id: 9, ticker: 'QQQ', entry: 375, exit: 378, quantity: 60, pnl: 180, outcome: 'win', timestamp: '2025-01-19T11:30:00Z', planned: true, strategy: 'momentum', plannedExit: 380, exitType: 'target' },
-    
-    // Strategy performance examples
-    { id: 10, ticker: 'AAPL', entry: 178, exit: 185, quantity: 90, pnl: 630, outcome: 'win', timestamp: '2025-01-19T09:30:00Z', planned: true, strategy: 'breakout' },
-    { id: 11, ticker: 'MSFT', entry: 425, exit: 430, quantity: 70, pnl: 350, outcome: 'win', timestamp: '2025-01-20T10:00:00Z', planned: true, strategy: 'momentum' },
-    { id: 12, ticker: 'NVDA', entry: 465, exit: 462, quantity: 40, pnl: -120, outcome: 'loss', timestamp: '2025-01-20T14:15:00Z', planned: false, strategy: null },
+    // Strategy examples
+    { id: 6, ticker: 'META', entry: 320, exit: 325, quantity: 75, pnl: 375, outcome: 'win', timestamp: '2025-01-17T13:20:00Z', planned: true, strategy: 'momentum' },
+    { id: 7, ticker: 'AMD', entry: 145, exit: 142, quantity: 100, pnl: -300, outcome: 'loss', timestamp: '2025-01-18T09:30:00Z', planned: true, strategy: 'breakout' },
     
     // Time-based examples
-    { id: 13, ticker: 'TSLA', entry: 255, exit: 262, quantity: 55, pnl: 385, outcome: 'win', timestamp: '2025-01-21T09:35:00Z', planned: true, strategy: 'momentum' },
-    { id: 14, ticker: 'META', entry: 325, exit: 322, quantity: 85, pnl: -255, outcome: 'loss', timestamp: '2025-01-21T15:00:00Z', planned: true, strategy: 'momentum' },
+    { id: 8, ticker: 'SPY', entry: 455, exit: 458, quantity: 80, pnl: 240, outcome: 'win', timestamp: '2025-01-18T10:45:00Z', planned: true, strategy: 'momentum' },
+    { id: 9, ticker: 'QQQ', entry: 375, exit: 378, quantity: 60, pnl: 180, outcome: 'win', timestamp: '2025-01-19T11:30:00Z', planned: true, strategy: 'momentum' },
     
     // Revenge trading examples
-    { id: 15, ticker: 'AMD', entry: 148, exit: 145, quantity: 300, pnl: -900, outcome: 'loss', timestamp: '2025-01-22T10:30:00Z', planned: false, strategy: null, afterLoss: true },
-    { id: 16, ticker: 'GOOGL', entry: 138, exit: 141, quantity: 35, pnl: 105, outcome: 'win', timestamp: '2025-01-22T11:45:00Z', planned: true, strategy: 'breakout' }
+    { id: 10, ticker: 'AMD', entry: 148, exit: 145, quantity: 300, pnl: -900, outcome: 'loss', timestamp: '2025-01-22T10:30:00Z', planned: false, strategy: null, afterLoss: true }
   ];
 
   // Use uploaded trades if available, otherwise dummy trades
   const allTrades = uploadedTrades.length > 0 ? uploadedTrades : [...propTrades, ...dummyTrades];
 
-  // 🧠 COMPLETE INSIGHT DETECTOR - ALL 3 PHASES
+  // 🧠 STREAMLINED INSIGHT DETECTOR - TOP 6 MOST VALUABLE INSIGHTS ONLY
   const insights = useMemo(() => {
     const insights = [];
     
-    if (allTrades.length < 5) {
+    if (allTrades.length < 8) {
       return [{
         id: 'insufficient_data',
-        category: 'Data Requirements',
+        category: 'Getting Started',
         type: 'info',
-        phase: 1,
-        title: 'Building Intelligence Profile',
-        message: `Analyzing ${allTrades.length} trades. Need 5+ trades for behavioral analysis.`,
+        priority: 'low',
+        title: 'Building Your Intelligence Profile',
+        message: `Analyzing ${allTrades.length} trades. Need 8+ trades to unlock powerful behavioral insights.`,
         impact: 'building',
         affectedTrades: [],
         confidence: 0
       }];
     }
 
-    // PHASE 1: LOW HANGING FRUIT 🍒
-
-    // 1. PLAN VS NO-PLAN ANALYSIS
+    // 1. 🎯 PLANNING ADVANTAGE/PENALTY - Most Important
     const plannedTrades = allTrades.filter(t => t.planned === true);
     const unplannedTrades = allTrades.filter(t => t.planned === false);
     
     if (plannedTrades.length >= 3 && unplannedTrades.length >= 3) {
-      const plannedWinRate = (plannedTrades.filter(t => t.outcome === 'win').length / plannedTrades.length) * 100;
-      const unplannedWinRate = (unplannedTrades.filter(t => t.outcome === 'win').length / unplannedTrades.length) * 100;
       const plannedAvgPnL = plannedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / plannedTrades.length;
       const unplannedAvgPnL = unplannedTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / unplannedTrades.length;
+      const difference = Math.abs(plannedAvgPnL - unplannedAvgPnL);
       
-      if (plannedAvgPnL > unplannedAvgPnL + 50) {
-        insights.push({
-          id: 'planning_advantage',
-          category: 'Planning Discipline',
-          type: 'success',
-          phase: 1,
-          title: 'Pre-Market Planning Advantage',
-          message: `Planned trades (${plannedTrades.length}) average $${plannedAvgPnL.toFixed(0)} vs unplanned trades $${unplannedAvgPnL.toFixed(0)}. Your edge strengthens with preparation.`,
-          impact: `+$${((plannedAvgPnL - unplannedAvgPnL) * plannedTrades.length).toFixed(0)}`,
-          affectedTrades: plannedTrades,
-          confidence: 88,
-          action: 'Plan every trade before market open'
-        });
-      } else if (unplannedAvgPnL > plannedAvgPnL + 50) {
-        insights.push({
-          id: 'overthinking_penalty',
-          category: 'Planning Discipline', 
-          type: 'warning',
-          phase: 1,
-          title: 'Over-Planning Performance Drag',
-          message: `Unplanned trades (${unplannedTrades.length}) outperform planned trades: $${unplannedAvgPnL.toFixed(0)} vs $${plannedAvgPnL.toFixed(0)}. Your instincts may be better than your plans.`,
-          impact: `-$${Math.abs((plannedAvgPnL - unplannedAvgPnL) * plannedTrades.length).toFixed(0)}`,
-          affectedTrades: plannedTrades,
-          confidence: 75,
-          action: 'Simplify planning process or trust instincts more'
-        });
+      if (difference > 75) { // Only show if meaningful difference
+        if (plannedAvgPnL > unplannedAvgPnL) {
+          insights.push({
+            id: 'planning_advantage',
+            category: 'Core Edge',
+            type: 'success',
+            priority: 'high',
+            title: 'Pre-Market Planning Edge',
+            message: `Planned trades average $${plannedAvgPnL.toFixed(0)} vs unplanned $${unplannedAvgPnL.toFixed(0)}. Your preparation creates real edge.`,
+            impact: `+$${((plannedAvgPnL - unplannedAvgPnL) * plannedTrades.length).toFixed(0)}`,
+            affectedTrades: plannedTrades,
+            confidence: 90,
+            action: 'Plan every trade before market open. Your discipline pays.'
+          });
+        } else {
+          insights.push({
+            id: 'overthinking_penalty',
+            category: 'Core Edge',
+            type: 'warning',
+            priority: 'high',
+            title: 'Over-Planning Performance Drag',
+            message: `Unplanned trades outperform planned trades by $${difference.toFixed(0)} average. Your instincts may be sharper than your plans.`,
+            impact: `-$${Math.abs((plannedAvgPnL - unplannedAvgPnL) * plannedTrades.length).toFixed(0)}`,
+            affectedTrades: plannedTrades,
+            confidence: 85,
+            action: 'Trust your instincts more. Simplify your planning process.'
+          });
+        }
       }
     }
 
-    // 2. SIZE DISCIPLINE
+    // 2. 💰 SIZE DISCIPLINE - Critical for Risk Management
     const smallTrades = allTrades.filter(t => t.quantity <= 50);
     const mediumTrades = allTrades.filter(t => t.quantity > 50 && t.quantity <= 100);
     const largeTrades = allTrades.filter(t => t.quantity > 100);
     
     const analyzeSize = (trades, label) => {
-      if (trades.length < 2) return null;
+      if (trades.length < 3) return null;
       return {
         label,
         count: trades.length,
-        winRate: (trades.filter(t => t.outcome === 'win').length / trades.length) * 100,
         avgPnL: trades.reduce((sum, t) => sum + (t.pnl || 0), 0) / trades.length,
-        totalPnL: trades.reduce((sum, t) => sum + (t.pnl || 0), 0)
+        totalPnL: trades.reduce((sum, t) => sum + (t.pnl || 0), 0),
+        winRate: (trades.filter(t => t.outcome === 'win').length / trades.length) * 100
       };
     };
 
@@ -147,119 +133,43 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
       const bestSize = sizeAnalysis.sort((a, b) => b.avgPnL - a.avgPnL)[0];
       const worstSize = sizeAnalysis.sort((a, b) => a.avgPnL - b.avgPnL)[0];
       
-      if (bestSize.avgPnL > worstSize.avgPnL + 100) {
+      if (bestSize.avgPnL > worstSize.avgPnL + 150) { // Only show significant differences
         const bestTrades = bestSize.label === 'Small' ? smallTrades : bestSize.label === 'Medium' ? mediumTrades : largeTrades;
-        const worstTrades = worstSize.label === 'Small' ? smallTrades : worstSize.label === 'Medium' ? mediumTrades : largeTrades;
         
         insights.push({
           id: 'size_sweet_spot',
-          category: 'Size Discipline',
+          category: 'Risk Management',
           type: 'success',
-          phase: 1,
+          priority: 'high',
           title: `${bestSize.label} Position Sweet Spot`,
-          message: `${bestSize.label} positions deliver ${bestSize.winRate.toFixed(0)}% win rate, $${bestSize.avgPnL.toFixed(0)} average vs ${worstSize.label} at ${worstSize.avgPnL.toFixed(0)}. This is your optimal size range.`,
+          message: `${bestSize.label} positions are your sweet spot: ${bestSize.winRate.toFixed(0)}% win rate, $${bestSize.avgPnL.toFixed(0)} average. This size optimizes your performance.`,
           impact: `+$${bestSize.totalPnL.toFixed(0)}`,
           affectedTrades: bestTrades,
-          confidence: 85,
-          action: `Focus 70% of trading on ${bestSize.label.toLowerCase()} position sizes`
+          confidence: 88,
+          action: `Focus 80% of your trading on ${bestSize.label.toLowerCase()} positions.`
         });
+      }
+      
+      // Also warn about worst performing size if it's bleeding significantly
+      if (worstSize.avgPnL < -100 && worstSize.count >= 3) {
+        const worstTrades = worstSize.label === 'Small' ? smallTrades : worstSize.label === 'Medium' ? mediumTrades : largeTrades;
         
         insights.push({
-          id: 'size_discipline_issue',
-          category: 'Size Discipline',
-          type: 'warning', 
-          phase: 1,
+          id: 'size_bleeding',
+          category: 'Risk Management',
+          type: 'warning',
+          priority: 'high',
           title: `${worstSize.label} Position Bleeding`,
-          message: `${worstSize.label} positions underperform: ${worstSize.winRate.toFixed(0)}% win rate, $${worstSize.avgPnL.toFixed(0)} average. Size may be compromising decision quality.`,
+          message: `${worstSize.label} positions are bleeding: $${worstSize.avgPnL.toFixed(0)} average across ${worstSize.count} trades. Size is compromising your decisions.`,
           impact: `-$${Math.abs(worstSize.totalPnL).toFixed(0)}`,
           affectedTrades: worstTrades,
-          confidence: 82,
-          action: `Reduce ${worstSize.label.toLowerCase()} position sizes by 30-50%`
+          confidence: 85,
+          action: `Reduce ${worstSize.label.toLowerCase()} position sizes by 50% immediately.`
         });
       }
     }
 
-    // 3. RISK/REWARD SOPHISTICATION
-    const rrTrades = allTrades.filter(t => t.riskReward);
-    if (rrTrades.length >= 4) {
-      const lowRR = rrTrades.filter(t => t.riskReward < 1.5);
-      const highRR = rrTrades.filter(t => t.riskReward >= 2.0);
-      
-      if (lowRR.length >= 2) {
-        const lowRRWinRate = (lowRR.filter(t => t.outcome === 'win').length / lowRR.length) * 100;
-        const lowRRPnL = lowRR.reduce((sum, t) => sum + (t.pnl || 0), 0);
-        
-        if (lowRRWinRate < 65 || lowRRPnL < 0) {
-          insights.push({
-            id: 'poor_rr_bleeding',
-            category: 'Risk Management',
-            type: 'warning',
-            phase: 1,
-            title: 'Low R/R Setup Bleeding',
-            message: `${lowRR.length} trades with poor R/R ratios (<1.5:1) show ${lowRRWinRate.toFixed(0)}% win rate. These setups need 65%+ win rates to be profitable.`,
-            impact: `-$${Math.abs(lowRRPnL).toFixed(0)}`,
-            affectedTrades: lowRR,
-            confidence: 90,
-            action: 'Only take setups with 2:1+ risk/reward ratio'
-          });
-        }
-      }
-      
-      if (highRR.length >= 2) {
-        const highRRWinRate = (highRR.filter(t => t.outcome === 'win').length / highRR.length) * 100;
-        const highRRPnL = highRR.reduce((sum, t) => sum + (t.pnl || 0), 0);
-        
-        if (highRRWinRate >= 45 && highRRPnL > 0) {
-          insights.push({
-            id: 'high_rr_mastery',
-            category: 'Risk Management',
-            type: 'success',
-            phase: 1,
-            title: 'High R/R Setup Mastery',
-            message: `${highRR.length} high R/R trades (2:1+) show ${highRRWinRate.toFixed(0)}% win rate. Quality setups are your edge.`,
-            impact: `+$${highRRPnL.toFixed(0)}`,
-            affectedTrades: highRR,
-            confidence: 88,
-            action: 'Focus exclusively on 2:1+ R/R setups'
-          });
-        }
-      }
-    }
-
-    // 4. PLAN ADHERENCE
-    const adherenceTrades = allTrades.filter(t => t.planned && t.plannedExit && t.exitType);
-    if (adherenceTrades.length >= 3) {
-      const earlyExits = adherenceTrades.filter(t => t.exitType === 'early');
-      const targetExits = adherenceTrades.filter(t => t.exitType === 'target');
-      
-      if (earlyExits.length >= 2) {
-        const earlyExitPnL = earlyExits.reduce((sum, t) => sum + (t.pnl || 0), 0);
-        const missedProfit = earlyExits.reduce((sum, t) => {
-          const planned = (t.plannedExit - t.entry) * t.quantity;
-          const actual = t.pnl || 0;
-          return sum + Math.max(0, planned - actual);
-        }, 0);
-        
-        if (missedProfit > 200) {
-          insights.push({
-            id: 'early_exit_bleeding',
-            category: 'Plan Adherence',
-            type: 'warning',
-            phase: 1,
-            title: 'Early Profit-Taking Bleeding',
-            message: `${earlyExits.length} trades exited early vs plan. Missed approximately $${missedProfit.toFixed(0)} in additional profits.`,
-            impact: `-$${missedProfit.toFixed(0)}`,
-            affectedTrades: earlyExits,
-            confidence: 85,
-            action: 'Set alerts at planned exit levels and stick to targets'
-          });
-        }
-      }
-    }
-
-    // PHASE 2: MEDIUM FRUIT 🌳
-
-    // 5. STRATEGY & SETUP PERFORMANCE  
+    // 3. 🏆 STRATEGY PERFORMANCE - Show Only Best and Worst
     const strategyStats = {};
     allTrades.forEach(trade => {
       const strategy = trade.strategy || 'unassigned';
@@ -271,104 +181,91 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
       if (trade.outcome === 'win') strategyStats[strategy].wins++;
     });
 
-    Object.entries(strategyStats).forEach(([strategy, stats]) => {
-      if (stats.trades.length >= 3 && strategy !== 'unassigned') {
-        const winRate = (stats.wins / stats.trades.length) * 100;
-        const avgPnL = stats.totalPnL / stats.trades.length;
-        
-        if (winRate >= 70 && avgPnL > 100) {
-          insights.push({
-            id: `strategy_mastery_${strategy}`,
-            category: 'Strategy Performance',
-            type: 'success',
-            phase: 2,
-            title: `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} Strategy Mastery`,
-            message: `${strategy} strategy: ${winRate.toFixed(0)}% win rate, $${avgPnL.toFixed(0)} average across ${stats.trades.length} trades. This setup is dialed in.`,
-            impact: `+$${stats.totalPnL.toFixed(0)}`,
-            affectedTrades: stats.trades,
-            confidence: 80,
-            action: `Increase allocation to ${strategy} setups by 25%`
-          });
-        } else if (winRate < 40 || avgPnL < -50) {
-          insights.push({
-            id: `strategy_bleeding_${strategy}`,
-            category: 'Strategy Performance',
-            type: 'warning',
-            phase: 2,
-            title: `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} Strategy Bleeding`,
-            message: `${strategy} strategy: ${winRate.toFixed(0)}% win rate, $${avgPnL.toFixed(0)} average. This approach needs refinement or elimination.`,
-            impact: `-$${Math.abs(stats.totalPnL).toFixed(0)}`,
-            affectedTrades: stats.trades,
-            confidence: 85,
-            action: `Pause ${strategy} trades until strategy is refined`
-          });
-        }
-      }
-    });
+    const validStrategies = Object.entries(strategyStats)
+      .filter(([strategy, stats]) => stats.trades.length >= 4 && strategy !== 'unassigned')
+      .map(([strategy, stats]) => ({
+        strategy,
+        ...stats,
+        winRate: (stats.wins / stats.trades.length) * 100,
+        avgPnL: stats.totalPnL / stats.trades.length
+      }))
+      .sort((a, b) => b.avgPnL - a.avgPnL);
 
-    // 6. PROFIT MANAGEMENT
+    // Show best strategy
+    if (validStrategies.length > 0) {
+      const bestStrategy = validStrategies[0];
+      if (bestStrategy.winRate >= 65 && bestStrategy.avgPnL > 150) {
+        insights.push({
+          id: `strategy_mastery_${bestStrategy.strategy}`,
+          category: 'Strategy Edge',
+          type: 'success',
+          priority: 'medium',
+          title: `${bestStrategy.strategy.charAt(0).toUpperCase() + bestStrategy.strategy.slice(1)} Mastery`,
+          message: `${bestStrategy.strategy} strategy: ${bestStrategy.winRate.toFixed(0)}% win rate, $${bestStrategy.avgPnL.toFixed(0)} average. This setup is dialed in.`,
+          impact: `+$${bestStrategy.totalPnL.toFixed(0)}`,
+          affectedTrades: bestStrategy.trades,
+          confidence: 82,
+          action: `Double down on ${bestStrategy.strategy} setups. This is your edge.`
+        });
+      }
+      
+      // Show worst strategy if it's really bad
+      const worstStrategy = validStrategies[validStrategies.length - 1];
+      if (worstStrategy.winRate < 35 || worstStrategy.avgPnL < -100) {
+        insights.push({
+          id: `strategy_bleeding_${worstStrategy.strategy}`,
+          category: 'Strategy Edge',
+          type: 'warning',
+          priority: 'medium',
+          title: `${worstStrategy.strategy.charAt(0).toUpperCase() + worstStrategy.strategy.slice(1)} Bleeding`,
+          message: `${worstStrategy.strategy} strategy: ${worstStrategy.winRate.toFixed(0)}% win rate, $${worstStrategy.avgPnL.toFixed(0)} average. This approach is bleeding capital.`,
+          impact: `-$${Math.abs(worstStrategy.totalPnL).toFixed(0)}`,
+          affectedTrades: worstStrategy.trades,
+          confidence: 88,
+          action: `Stop trading ${worstStrategy.strategy} until you fix the approach.`
+        });
+      }
+    }
+
+    // 4. ⚖️ PROFIT MANAGEMENT - Cut Winners vs Run Losers
     const winners = allTrades.filter(t => t.outcome === 'win' && t.pnl > 0);
     const losers = allTrades.filter(t => t.outcome === 'loss' && t.pnl < 0);
     
-    if (winners.length >= 3 && losers.length >= 3) {
+    if (winners.length >= 4 && losers.length >= 4) {
       const avgWin = winners.reduce((sum, t) => sum + t.pnl, 0) / winners.length;
       const avgLoss = Math.abs(losers.reduce((sum, t) => sum + t.pnl, 0) / losers.length);
       const winLossRatio = avgWin / avgLoss;
       
-      if (avgLoss > avgWin * 1.5) {
+      if (avgLoss > avgWin * 1.8) { // Significant problem
         insights.push({
           id: 'profit_management_bleeding',
           category: 'Profit Management',
           type: 'warning',
-          phase: 2,
+          priority: 'high',
           title: 'Classic "Cut Winners, Run Losers"',
-          message: `Average loss ($${avgLoss.toFixed(0)}) is ${(avgLoss/avgWin).toFixed(1)}x larger than average win ($${avgWin.toFixed(0)}). Letting losers run while cutting winners early.`,
+          message: `Average loss ($${avgLoss.toFixed(0)}) is ${(avgLoss/avgWin).toFixed(1)}x your average win ($${avgWin.toFixed(0)}). You're doing the opposite of what works.`,
           impact: `-$${((avgLoss - avgWin) * Math.min(winners.length, losers.length)).toFixed(0)}`,
           affectedTrades: [...winners, ...losers],
-          confidence: 92,
-          action: 'Use hard stops and let winners run to planned targets'
+          confidence: 95,
+          action: 'Use hard stops. Let winners run to targets. Cut losers fast.'
         });
-      } else if (winLossRatio >= 2.0) {
+      } else if (winLossRatio >= 2.5) { // Excellent management
         insights.push({
           id: 'profit_management_mastery',
           category: 'Profit Management',
           type: 'success',
-          phase: 2,
-          title: 'Excellent Winner/Loser Ratio',
-          message: `Average win ($${avgWin.toFixed(0)}) is ${winLossRatio.toFixed(1)}x average loss ($${avgLoss.toFixed(0)}). Strong profit-taking discipline.`,
+          priority: 'medium',
+          title: 'Excellent Profit Management',
+          message: `Average win ($${avgWin.toFixed(0)}) is ${winLossRatio.toFixed(1)}x average loss ($${avgLoss.toFixed(0)}). You're managing risk like a pro.`,
           impact: `+$${((avgWin - avgLoss) * Math.min(winners.length, losers.length)).toFixed(0)}`,
           affectedTrades: winners,
           confidence: 88,
-          action: 'Maintain current profit-taking approach'
+          action: 'Keep doing exactly what you\'re doing with profit management.'
         });
       }
     }
 
-    // 7. REVENGE TRADING DETECTION
-    const revengeTrades = allTrades.filter(t => t.afterLoss === true || (!t.planned && t.quantity > 150));
-    if (revengeTrades.length >= 2) {
-      const revengeWinRate = (revengeTrades.filter(t => t.outcome === 'win').length / revengeTrades.length) * 100;
-      const revengePnL = revengeTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
-      
-      if (revengeWinRate < 50 || revengePnL < 0) {
-        insights.push({
-          id: 'revenge_trading_bleeding',
-          category: 'Emotional Control',
-          type: 'warning',
-          phase: 2,
-          title: 'Revenge Trading Detection',
-          message: `${revengeTrades.length} revenge trades (unplanned + oversized after losses) show ${revengeWinRate.toFixed(0)}% win rate. Emotional trading is bleeding capital.`,
-          impact: `-$${Math.abs(revengePnL).toFixed(0)}`,
-          affectedTrades: revengeTrades,
-          confidence: 88,
-          action: 'Take 30-minute break after any loss before next trade'
-        });
-      }
-    }
-
-    // PHASE 3: ADVANCED FRUIT 🚀
-
-    // 8. TIME-BASED PERFORMANCE
+    // 5. ⏰ TIME EDGE - When You're Sharpest
     const timeGroups = {
       morning: allTrades.filter(t => {
         const hour = new Date(t.timestamp).getHours();
@@ -385,115 +282,69 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
     };
 
     let bestSession = null;
-    let worstSession = null;
     let bestSessionPerf = -Infinity;
-    let worstSessionPerf = Infinity;
 
     Object.entries(timeGroups).forEach(([session, trades]) => {
-      if (trades.length >= 3) {
+      if (trades.length >= 4) {
         const avgPnL = trades.reduce((sum, t) => sum + (t.pnl || 0), 0) / trades.length;
         if (avgPnL > bestSessionPerf) {
           bestSessionPerf = avgPnL;
-          bestSession = { name: session, trades, avgPnL };
-        }
-        if (avgPnL < worstSessionPerf) {
-          worstSessionPerf = avgPnL;
-          worstSession = { name: session, trades, avgPnL };
+          bestSession = { 
+            name: session, 
+            trades, 
+            avgPnL,
+            winRate: (trades.filter(t => t.outcome === 'win').length / trades.length) * 100
+          };
         }
       }
     });
 
-    if (bestSession && worstSession && bestSession.avgPnL > worstSession.avgPnL + 50) {
-      const bestWinRate = (bestSession.trades.filter(t => t.outcome === 'win').length / bestSession.trades.length) * 100;
-      
+    if (bestSession && bestSession.avgPnL > 100 && bestSession.winRate >= 60) {
       insights.push({
         id: 'time_session_advantage',
         category: 'Timing Edge',
         type: 'success',
-        phase: 3,
+        priority: 'medium',
         title: `${bestSession.name.charAt(0).toUpperCase() + bestSession.name.slice(1)} Session Dominance`,
-        message: `${bestSession.name} trading: ${bestWinRate.toFixed(0)}% win rate, $${bestSession.avgPnL.toFixed(0)} average vs ${worstSession.name} at $${worstSession.avgPnL.toFixed(0)}. You're sharpest during ${bestSession.name} hours.`,
+        message: `${bestSession.name} trading: ${bestSession.winRate.toFixed(0)}% win rate, $${bestSession.avgPnL.toFixed(0)} average. You're sharpest during ${bestSession.name} hours.`,
         impact: `+$${(bestSession.avgPnL * bestSession.trades.length).toFixed(0)}`,
         affectedTrades: bestSession.trades,
         confidence: 85,
-        action: `Focus 70% of trading activity during ${bestSession.name} hours`
+        action: `Focus 70% of your trading during ${bestSession.name} hours.`
       });
     }
 
-    // 9. DAILY CONSISTENCY ANALYSIS
-    const dailyPnL = {};
-    allTrades.forEach(trade => {
-      const date = trade.timestamp.split('T')[0];
-      if (!dailyPnL[date]) dailyPnL[date] = 0;
-      dailyPnL[date] += trade.pnl || 0;
-    });
-
-    const dailyResults = Object.values(dailyPnL);
-    if (dailyResults.length >= 5) {
-      const positiveDays = dailyResults.filter(pnl => pnl > 0).length;
-      const dailyWinRate = (positiveDays / dailyResults.length) * 100;
+    // 6. 😡 REVENGE TRADING - Emotional Control
+    const revengeTrades = allTrades.filter(t => t.afterLoss === true || (!t.planned && t.quantity > 150));
+    if (revengeTrades.length >= 3) {
+      const revengeWinRate = (revengeTrades.filter(t => t.outcome === 'win').length / revengeTrades.length) * 100;
+      const revengePnL = revengeTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
       
-      if (dailyWinRate >= 70) {
+      if (revengeWinRate < 45 && revengePnL < -200) {
         insights.push({
-          id: 'daily_consistency',
-          category: 'Consistency',
-          type: 'success',
-          phase: 3,
-          title: 'High Daily Win Rate',
-          message: `${positiveDays} profitable days out of ${dailyResults.length} (${dailyWinRate.toFixed(0)}%). Strong daily consistency.`,
-          impact: 'consistency',
-          affectedTrades: [],
-          confidence: 85,
-          action: 'Maintain current daily P&L management approach'
-        });
-      } else if (dailyWinRate <= 40) {
-        insights.push({
-          id: 'daily_inconsistency',
-          category: 'Consistency',
+          id: 'revenge_trading_bleeding',
+          category: 'Emotional Control',
           type: 'warning',
-          phase: 3,
-          title: 'Daily Consistency Challenge',
-          message: `Only ${positiveDays} profitable days out of ${dailyResults.length} (${dailyWinRate.toFixed(0)}%). High daily volatility detected.`,
-          impact: 'volatility',
-          affectedTrades: [],
-          confidence: 80,
-          action: 'Set daily P&L limits: +$500 target, -$300 stop'
+          priority: 'high',
+          title: 'Revenge Trading Detected',
+          message: `${revengeTrades.length} revenge trades (emotional + oversized) show ${revengeWinRate.toFixed(0)}% win rate. Emotions are costing you money.`,
+          impact: `-$${Math.abs(revengePnL).toFixed(0)}`,
+          affectedTrades: revengeTrades,
+          confidence: 92,
+          action: 'Take 30-minute break after any loss. No exceptions.'
         });
       }
     }
 
-    // 10. MARKET VS P&L TRADING
-    const quickTrades = allTrades.filter(t => {
-      const entryTime = new Date(t.timestamp);
-      const exitTime = new Date(t.timestamp);
-      exitTime.setMinutes(exitTime.getMinutes() + 15); // Assume quick trades are <15min
-      return t.quantity > 100; // Quick + large = likely P&L focused
-    });
-
-    if (quickTrades.length >= 3) {
-      const quickWinRate = (quickTrades.filter(t => t.outcome === 'win').length / quickTrades.length) * 100;
-      const quickAvgPnL = quickTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / quickTrades.length;
-      
-      if (quickWinRate < 50 && quickAvgPnL < 0) {
-        insights.push({
-          id: 'pnl_trading_bleeding',
-          category: 'Market Focus',
-          type: 'warning',
-          phase: 3,
-          title: 'P&L-Focused Trading Bleeding',
-          message: `${quickTrades.length} quick + large trades show ${quickWinRate.toFixed(0)}% win rate. Trading P&L instead of market structure.`,
-          impact: `-$${Math.abs(quickTrades.reduce((sum, t) => sum + (t.pnl || 0), 0)).toFixed(0)}`,
-          affectedTrades: quickTrades,
-          confidence: 75,
-          action: 'Focus on market structure, not profit targets'
-        });
-      }
-    }
-
+    // Sort by priority: High priority warnings first, then successes, then medium
     return insights.sort((a, b) => {
-      const phaseOrder = { 1: 3, 2: 2, 3: 1 };
-      const severityOrder = { warning: 2, success: 1, info: 0 };
-      return (phaseOrder[a.phase] - phaseOrder[b.phase]) || (severityOrder[b.type] - severityOrder[a.type]);
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const typeOrder = { warning: 3, success: 2, info: 1 };
+      
+      if (a.priority !== b.priority) {
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      }
+      return typeOrder[b.type] - typeOrder[a.type];
     });
   }, [allTrades]);
 
@@ -504,12 +355,229 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          // Parse XML and convert to trade format
           const xmlContent = e.target.result;
-          // This would need proper XML parsing in real implementation
           console.log('Uploaded XML:', xmlContent);
           setShowUploader(false);
         } catch (error) {
           console.error('Error parsing XML:', error);
         }
       };
+      reader.readAsText(file);
+    }
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  // Group insights by category
+  const groupedInsights = useMemo(() => {
+    const groups = {};
+    insights.forEach(insight => {
+      if (!groups[insight.category]) {
+        groups[insight.category] = [];
+      }
+      groups[insight.category].push(insight);
+    });
+    return groups;
+  }, [insights]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            <Brain className="h-8 w-8 text-purple-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Intelligence Engine</h1>
+              <p className="text-gray-600">Smart insights • Top issues only</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Live Analysis ({allTrades.length} trades)</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setShowUploader(!showUploader)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Upload Data</span>
+          </button>
+          <button className="p-2 bg-white rounded-lg shadow-sm hover:shadow-md">
+            <Download className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Upload Modal */}
+      {showUploader && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Upload Trading Data</h3>
+              <button onClick={() => setShowUploader(false)}>
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-600 mb-4">Upload your trading platform export</p>
+              <input
+                type="file"
+                accept=".xml,.csv"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700"
+              >
+                Choose File
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Insights Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center space-x-3">
+            <Brain className="h-8 w-8 text-purple-600" />
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{insights.length}</p>
+              <p className="text-gray-600">Active Insights</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="h-8 w-8 text-red-600" />
+            <div>
+              <p className="text-2xl font-bold text-red-600">
+                {insights.filter(i => i.type === 'warning').length}
+              </p>
+              <p className="text-gray-600">Issues Found</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center space-x-3">
+            <Award className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="text-2xl font-bold text-green-600">
+                {insights.filter(i => i.type === 'success').length}
+              </p>
+              <p className="text-gray-600">Strengths</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center space-x-3">
+            <Zap className="h-8 w-8 text-blue-600" />
+            <div>
+              <p className="text-2xl font-bold text-blue-600">
+                {insights.filter(i => i.priority === 'high').length}
+              </p>
+              <p className="text-gray-600">High Priority</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Priority Insights - No Categories, Just Show Top Issues */}
+      <div className="space-y-4">
+        {insights.map((insight, index) => (
+          <div
+            key={insight.id}
+            className={`bg-white rounded-lg shadow-sm p-6 border-l-4 cursor-pointer transition-all hover:shadow-md ${
+              insight.type === 'success' ? 'border-green-500' :
+              insight.type === 'warning' ? 'border-red-500' :
+              'border-blue-500'
+            } ${selectedInsight?.id === insight.id ? 'ring-2 ring-purple-500' : ''}`}
+            onClick={() => setSelectedInsight(insight)}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-lg ${
+                  insight.type === 'success' ? 'bg-green-100' :
+                  insight.type === 'warning' ? 'bg-red-100' :
+                  'bg-blue-100'
+                }`}>
+                  {insight.type === 'success' ? (
+                    <Award className={`h-5 w-5 text-green-600`} />
+                  ) : insight.type === 'warning' ? (
+                    <AlertTriangle className={`h-5 w-5 text-red-600`} />
+                  ) : (
+                    <Brain className={`h-5 w-5 text-blue-600`} />
+                  )}
+                </div>
+                <div>
+                  <h3 className={`text-lg font-semibold ${
+                    insight.type === 'success' ? 'text-green-800' :
+                    insight.type === 'warning' ? 'text-red-800' :
+                    'text-blue-800'
+                  }`}>
+                    {insight.title}
+                  </h3>
+                  <p className="text-sm text-gray-500">{insight.category}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                {insight.priority === 'high' && (
+                  <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">
+                    HIGH PRIORITY
+                  </span>
+                )}
+                {insight.impact !== 'building' && insight.impact !== 'consistency' && (
+                  <span className={`text-lg font-bold ${
+                    insight.impact.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {insight.impact}
+                  </span>
+                )}
+                {insight.confidence > 0 && (
+                  <span className="text-xs text-gray-500">
+                    {insight.confidence}% confidence
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <p className={`text-gray-700 mb-4 leading-relaxed`}>
+              {insight.message}
+            </p>
+            
+            {insight.action && (
+              <div className={`p-3 rounded-lg border ${
+                insight.type === 'success' ? 'bg-green-50 border-green-200' :
+                insight.type === 'warning' ? 'bg-red-50 border-red-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  <Zap className={`h-4 w-4 ${
+                    insight.type === 'success' ? 'text-green-600' :
+                    insight.type === 'warning' ? 'text-red-600' :
+                    'text-blue-600'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    insight.type === 'success' ? 'text-green-800' :
+                    insight.type === 'warning' ? 'text-red-800' :
+                    'text-blue-800'
+                  }`}>
+                    Action: {insight.action}
+                  </span>
+                </div>
