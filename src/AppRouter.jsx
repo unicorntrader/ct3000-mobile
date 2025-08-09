@@ -91,19 +91,7 @@ function AppRouter() {
     }
   };
 
-  if (isMobile) {
-    return (
-      <MobileAdapter {...tradingState}>
-        {(props) => renderActiveModule(props)}
-      </MobileAdapter>
-    );
-  }
+return <UnifiedAdapter {...tradingState}>{(props) => renderActiveModule(props)}</UnifiedAdapter>
 
-  return (
-    <DesktopAdapter {...tradingState}>
-      {() => renderActiveModule(tradingState)}
-    </DesktopAdapter>
-  );
-}
 
 export default AppRouter;
