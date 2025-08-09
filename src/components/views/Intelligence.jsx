@@ -3,25 +3,18 @@ import {
   Brain,
   Upload,
   FileText,
-  TrendingUp,
   AlertTriangle,
   Award,
   Target,
-  DollarSign,
-  Activity,
-  BarChart3,
   Zap,
   Download,
-  X,
-  ChevronDown,
-  ChevronUp
+  X
 } from 'lucide-react';
 
 const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
   const [uploadedTrades, setUploadedTrades] = useState([]);
   const [selectedInsight, setSelectedInsight] = useState(null);
   const [showUploader, setShowUploader] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState({});
 
   // Dummy trades for testing when no XML uploaded
   const dummyTrades = [
@@ -366,25 +359,6 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
     }
   };
 
-  const toggleCategory = (category) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
-
-  // Group insights by category
-  const groupedInsights = useMemo(() => {
-    const groups = {};
-    insights.forEach(insight => {
-      if (!groups[insight.category]) {
-        groups[insight.category] = [];
-      }
-      groups[insight.category].push(insight);
-    });
-    return groups;
-  }, [insights]);
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
@@ -517,11 +491,11 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
                   'bg-blue-100'
                 }`}>
                   {insight.type === 'success' ? (
-                    <Award className={`h-5 w-5 text-green-600`} />
+                    <Award className="h-5 w-5 text-green-600" />
                   ) : insight.type === 'warning' ? (
-                    <AlertTriangle className={`h-5 w-5 text-red-600`} />
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
                   ) : (
-                    <Brain className={`h-5 w-5 text-blue-600`} />
+                    <Brain className="h-5 w-5 text-blue-600" />
                   )}
                 </div>
                 <div>
@@ -557,7 +531,7 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
               </div>
             </div>
             
-            <p className={`text-gray-700 mb-4 leading-relaxed`}>
+            <p className="text-gray-700 mb-4 leading-relaxed">
               {insight.message}
             </p>
             
@@ -581,3 +555,165 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
                     Action: {insight.action}
                   </span>
                 </div>
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                {insight.affectedTrades && insight.affectedTrades.length > 0 && (
+                )}
+              </div>
+              <button className="text-purple-600 text-sm font-medium hover:text-purple-800">
+                View Details →
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Selected Insight Detail Panel */}
+      {selectedInsight && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{selectedInsight.title}</h3>
+                  <div className="flex items-center space-x-3">
+                    <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                      {selectedInsight.category}
+                    </span>
+                    {selectedInsight.priority === 'high' && (
+                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                        High Priority
+                      </span>
+                    )}
+                    {selectedInsight.confidence > 0 && (
+                      <span className="text-sm text-gray-500">
+                        {selectedInsight.confidence}% confidence
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedInsight(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <h4 className="font-semibold mb-3">Detailed Analysis</h4>
+                  <p className="text-gray-700 leading-relaxed mb-4">{selectedInsight.message}</p>
+                  
+                  {selectedInsight.action && (
+                    <div className={`border rounded-lg p-4 mb-4 ${
+                      selectedInsight.type === 'success' ? 'bg-green-50 border-green-200' :
+                      selectedInsight.type === 'warning' ? 'bg-red-50 border-red-200' :
+                      'bg-blue-50 border-blue-200'
+                    }`}>
+                      <h5 className={`font-semibold mb-2 ${
+                        selectedInsight.type === 'success' ? 'text-green-900' :
+                        selectedInsight.type === 'warning' ? 'text-red-900' :
+                        'text-blue-900'
+                      }`}>
+                        Recommended Action
+                      </h5>
+                      <p className={
+                        selectedInsight.type === 'success' ? 'text-green-800' :
+                        selectedInsight.type === 'warning' ? 'text-red-800' :
+                        'text-blue-800'
+                      }>
+                        {selectedInsight.action}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedInsight.affectedTrades && selectedInsight.affectedTrades.length > 0 && (
+                    <div>
+                      <h5 className="font-semibold mb-3">Affected Trades ({selectedInsight.affectedTrades.length})</h5>
+                      <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                          {selectedInsight.affectedTrades.slice(0, 12).map(trade => (
+                            <div key={trade.id} className="flex justify-between">
+                              <span className="font-medium">{trade.ticker}</span>
+                              <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                {trade.pnl >= 0 ? '+' : ''}${trade.pnl}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {selectedInsight.affectedTrades.length > 12 && (
+                          <div className="text-center mt-2 text-gray-500 text-sm">
+                            +{selectedInsight.affectedTrades.length - 12} more trades
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h5 className="font-semibold mb-3">Insight Metrics</h5>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Type:</span>
+                        <span className="font-medium capitalize">{selectedInsight.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Priority:</span>
+                        <span className={`font-medium capitalize ${
+                          selectedInsight.priority === 'high' ? 'text-red-600' : 'text-blue-600'
+                        }`}>
+                          {selectedInsight.priority}
+                        </span>
+                      </div>
+                      {selectedInsight.confidence > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Confidence:</span>
+                          <span className="font-medium">{selectedInsight.confidence}%</span>
+                        </div>
+                      )}
+                      {selectedInsight.impact !== 'building' && selectedInsight.impact !== 'consistency' && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Impact:</span>
+                          <span className={`font-medium ${
+                            selectedInsight.impact.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {selectedInsight.impact}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <button className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                    selectedInsight.type === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
+                    selectedInsight.type === 'warning' ? 'bg-red-600 hover:bg-red-700 text-white' :
+                    'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}>
+                    Apply Insight
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {insights.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Brain className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+          <p className="text-lg">Building Intelligence Profile</p>
+          <p className="text-sm">Need more trading data for pattern analysis</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export { InsightDetector as Intelligence };
