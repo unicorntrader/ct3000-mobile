@@ -806,26 +806,4 @@ const InsightDetector = ({ trades: propTrades = [], onTradesUpdate }) => {
   );
 };
 
-export { InsightDetector as Intelligence };xl font-bold text-gray-900">{insights.length}</p>
-              <p className="text-gray-600">Active Insights</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center space-x-3">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-            <div>
-              <p className="text-2xl font-bold text-red-600">
-                {insights.filter(i => i.type === 'warning').length}
-              </p>
-              <p className="text-gray-600">Issues Found</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center space-x-3">
-            <Award className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-2
+export { InsightDetector as Intelligence };
