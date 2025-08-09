@@ -92,7 +92,7 @@ function AppRouter() {
     }
   };
 
-  return <UnifiedAdapter {...tradingState}>{(props) => renderActiveModule(props)}</MobileAdapter>;
+  return <UnifiedAdapter {...tradingState}>{(props) => renderActiveModule(props)}</UnifiedAdapter>;
 }
 
 export default AppRouter;
