@@ -1,2 +1,1 @@
-export { MobileAdapter } from './MobileAdapter';
-export { DesktopAdapter } from './DesktopAdapter';
+export { UnifiedAdapter } from './MobileAdapter';
