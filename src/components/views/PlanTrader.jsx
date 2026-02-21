@@ -270,19 +270,7 @@ function NewPlanModal({ onSave, onClose }) {
 
   const rrColor = rr?.ratio ? (rr.ratio >= 2 ? '#16a34a' : rr.ratio >= 1 ? '#d97706' : '#dc2626') : '#111827';
 
-  const strategies = [
-    { id: '', label: 'Select Strategy' },
-    { id: 'breakout',      label: 'Breakout' },
-    { id: 'momentum',      label: 'Momentum' },
-    { id: 'mean-reversion',label: 'Mean Reversion' },
-    { id: 'news-event',    label: 'News/Event' },
-    { id: 'scalping',      label: 'Scalping' },
-    { id: 'swing',         label: 'Swing Trade' },
-    { id: 'gap-play',      label: 'Gap Play' },
-    { id: 'custom',        label: 'Custom Setup' },
-  ];
-
-  const isValid = ticker && entry && target && stop && qty && strategy &&
+  const isValid = ticker && entry && target && stop && qty &&
     parseFloat(entry) > 0 && parseFloat(target) > 0 &&
     parseFloat(stop) > 0 && parseFloat(qty) > 0;
 
@@ -323,11 +311,8 @@ function NewPlanModal({ onSave, onClose }) {
             {/* Strategy */}
             <div className="pt-group">
               <label className="pt-label">Strategy</label>
-              <div className="pt-select-wrap">
-                <select className="pt-select" value={strategy} onChange={e => setStrat(e.target.value)}>
-                  {strategies.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </div>
+              <input className="pt-input" type="text" placeholder="e.g. Breakout, Scalp…"
+                value={strategy} onChange={e => setStrat(e.target.value)} />
             </div>
 
             {/* Direction */}
@@ -574,75 +559,21 @@ export const PlanTrader = (props) => {
 
   const [showModal, setShowModal] = useState(false);
 
-  const strategies = [
-    { id: '', label: 'Select Strategy', color: '#6b7280' },
-    { id: 'breakout',      label: 'Breakout',      color: '#3b82f6', icon: TrendingUp, description: 'Support/resistance breaks' },
-    { id: 'momentum',      label: 'Momentum',      color: '#10b981', icon: Zap,        description: 'Trend following plays' },
-    { id: 'mean-reversion',label: 'Mean Reversion',color: '#f59e0b', icon: BarChart3,  description: 'Oversold/overbought' },
-    { id: 'news-event',    label: 'News/Event',    color: '#ef4444', icon: Clock,      description: 'Earnings, catalysts' },
-    { id: 'scalping',      label: 'Scalping',      color: '#8b5cf6', icon: Zap,        description: 'Quick in/out trades' },
-    { id: 'swing',         label: 'Swing Trade',   color: '#06b6d4', icon: TrendingUp, description: 'Multi-day holds' },
-    { id: 'gap-play',      label: 'Gap Play',      color: '#84cc16', icon: BarChart3,  description: 'Gap up/down setups' },
-    { id: 'custom',        label: 'Custom Setup',  color: '#6b7280', icon: Brain,      description: 'User-defined strategy' },
-    { id: 'options-lc',    label: 'Long Call',     color: '#3b82f6', icon: TrendingUp, description: 'Options — bullish' },
-    { id: 'options-lp',    label: 'Long Put',      color: '#9333ea', icon: TrendingUp, description: 'Options — bearish' },
-    { id: 'options-sc',    label: 'Short Call',    color: '#dc2626', icon: Zap,        description: 'Options — bearish/neutral' },
-    { id: 'options-sp',    label: 'Short Put',     color: '#16a34a', icon: Zap,        description: 'Options — bullish/neutral' },
-  ];
+  // Save: pipe directly into setTradePlans if available, else use the ref/tick workaround
+  const pendingRef = useRef(null);
+  const [pendingTick, setPendingTick] = useState(0);
 
-  const getStrategy = id => strategies.find(s => s.id === id) || strategies[0];
-
-  const groupedPlans = useMemo(() => {
-    const groups = {};
-    tradePlans.forEach(plan => {
-      const key = plan.strategy || 'unassigned';
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(plan);
-    });
-    return groups;
-  }, [tradePlans]);
-
-  // When modal saves, pipe into the existing useTradingState flow
-  function handleModalSave(planData) {
-    // Temporarily set newPlan then call addTradePlan
-    // Since setNewPlan is async, we create the plan directly here
-    const plan = {
-      id: Date.now(),
-      ...planData,
-      timestamp: new Date().toISOString(),
-      status: 'planned',
-    };
-    // Use the setter + add pattern from useTradingState
-    setNewPlan(planData);
-    // Defer to let state settle, then add
-    setTimeout(() => {
-      addTradePlan();
-      setNewPlan({ ticker:'', entry:'', target:'', stopLoss:'', position:'long', quantity:'', notes:'', strategy:'' });
-    }, 0);
-  }
-
-  // Simpler: bypass setNewPlan and directly use setTradePlans if available
-  // But since we only have addTradePlan, we use the approach below:
-  function handleModalSaveDirect(planData) {
-    const plan = {
-      id: Date.now(),
-      ticker: planData.ticker,
-      entry: planData.entry,
-      target: planData.target,
-      stopLoss: planData.stopLoss,
-      quantity: planData.quantity,
-      notes: planData.notes,
-      position: planData.position,
-      strategy: planData.strategy,
-      timestamp: new Date().toISOString(),
-      status: 'planned',
-      ...(planData.optionType && { optionType: planData.optionType, expiry: planData.expiry }),
-    };
-    // setTradePlans is available via props if passed through, otherwise use addTradePlan workaround
+  function handleSave(planData) {
     if (props.setTradePlans) {
-      props.setTradePlans(prev => [...prev, plan]);
+      props.setTradePlans(prev => [...prev, {
+        id: Date.now(),
+        ...planData,
+        timestamp: new Date().toISOString(),
+        status: 'planned',
+      }]);
     } else {
-      // Fall back: populate newPlan state and call addTradePlan
+      // Fallback: use setNewPlan + addTradePlan via effect
+      pendingRef.current = planData;
       setNewPlan({
         ticker: planData.ticker,
         entry: planData.entry,
@@ -651,29 +582,10 @@ export const PlanTrader = (props) => {
         quantity: planData.quantity,
         notes: planData.notes,
         position: planData.position,
-        strategy: planData.strategy,
+        strategy: planData.strategy || '',
       });
-      // addTradePlan reads from newPlan state — use a ref approach below
+      setPendingTick(t => t + 1);
     }
-  }
-
-  // Best approach: keep a pendingPlan ref, effect fires addTradePlan when it's set
-  const pendingRef = useRef(null);
-  const [pendingTick, setPendingTick] = useState(0);
-
-  function handleSave(planData) {
-    pendingRef.current = planData;
-    setNewPlan({
-      ticker: planData.ticker,
-      entry: planData.entry,
-      target: planData.target,
-      stopLoss: planData.stopLoss,
-      quantity: planData.quantity,
-      notes: planData.notes,
-      position: planData.position,
-      strategy: planData.strategy,
-    });
-    setPendingTick(t => t + 1);
   }
 
   useEffect(() => {
@@ -683,66 +595,60 @@ export const PlanTrader = (props) => {
     }
   }, [pendingTick]);
 
-  const PlansList = ({ plans }) => (
-    <div className="space-y-4">
-      {Object.entries(groupedPlans).map(([strategyId, plans]) => {
-        const strategy = getStrategy(strategyId);
-        const StratIcon = strategy.icon || Target;
-        return (
-          <div key={strategyId} className="space-y-2">
-            <div className="flex items-center space-x-2 px-1">
-              <StratIcon className="h-4 w-4" style={{ color: strategy.color }} />
-              <span className="font-medium text-sm" style={{ color: strategy.color }}>
-                {strategy.label} ({plans.length})
-              </span>
-            </div>
-            {plans.map(plan => (
-              <div key={plan.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4"
-                style={{ borderLeftColor: strategy.color }}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center space-x-2 flex-wrap gap-1">
-                      <span className="font-bold text-lg">{plan.ticker}</span>
-                      <span className="px-2 py-0.5 text-xs rounded"
-                        style={{ background: strategy.color + '20', color: strategy.color }}>
-                        {strategy.label}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs rounded ${plan.position === 'long' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {plan.position?.toUpperCase()}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs rounded ${plan.status === 'executed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                        {plan.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(plan.timestamp).toLocaleDateString()}</p>
-                    {plan.entry && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Entry: ${plan.entry}
-                        {plan.target   && ` · Target: $${plan.target}`}
-                        {plan.stopLoss && ` · Stop: $${plan.stopLoss}`}
-                        {plan.quantity && ` · Qty: ${plan.quantity}`}
-                        {plan.expiry   && ` · Exp: ${plan.expiry}`}
-                      </p>
-                    )}
-                    {plan.notes && <p className="text-xs text-gray-500 mt-1 italic">{plan.notes}</p>}
-                  </div>
-                  <div className="flex space-x-2 ml-3">
-                    {plan.status === 'planned' && (
-                      <button onClick={() => executeTradePlan(plan.id)}
-                        className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors">
-                        <Play className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button onClick={() => deleteTradePlan(plan.id)}
-                      className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+  const PlansList = () => (
+    <div className="space-y-3">
+      {tradePlans.map(plan => (
+        <div key={plan.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-400">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="font-bold text-lg">{plan.ticker}</span>
+                {plan.strategy && (
+                  <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
+                    {plan.strategy}
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 text-xs rounded ${plan.position === 'long' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {plan.position?.toUpperCase()}
+                </span>
+                <span className={`px-2 py-0.5 text-xs rounded ${plan.status === 'executed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                  {plan.status}
+                </span>
               </div>
-            ))}
+              <p className="text-xs text-gray-400 mt-1">{new Date(plan.timestamp).toLocaleDateString()}</p>
+              {plan.entry && (
+                <p className="text-sm text-gray-600 mt-1">
+                  Entry: ${plan.entry}
+                  {plan.target   && ` · Target: $${plan.target}`}
+                  {plan.stopLoss && ` · Stop: $${plan.stopLoss}`}
+                  {plan.quantity && ` · Qty: ${plan.quantity}`}
+                  {plan.expiry   && ` · Exp: ${plan.expiry}`}
+                </p>
+              )}
+              {plan.notes && <p className="text-xs text-gray-500 mt-1 italic">{plan.notes}</p>}
+            </div>
+            <div className="flex space-x-2 ml-3">
+              {plan.status === 'planned' && (
+                <button onClick={() => executeTradePlan(plan.id)}
+                  className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors">
+                  <Play className="h-4 w-4" />
+                </button>
+              )}
+              <button onClick={() => deleteTradePlan(plan.id)}
+                className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        );
+        </div>
+      ))}
+      {tradePlans.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p className="text-lg">No trade plans yet</p>
+          <p className="text-sm">Hit the button above to create your first plan</p>
+        </div>
+      )};
       })}
       {tradePlans.length === 0 && (
         <div className="text-center py-12 text-gray-500">
@@ -769,7 +675,7 @@ export const PlanTrader = (props) => {
               <span>New Plan</span>
             </button>
           </div>
-          <PlansList plans={tradePlans} />
+          <PlansList />
         </div>
       ) : (
         <div className="space-y-6">
@@ -782,7 +688,7 @@ export const PlanTrader = (props) => {
             </button>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <PlansList plans={tradePlans} />
+            <PlansList />
           </div>
         </div>
       )}
