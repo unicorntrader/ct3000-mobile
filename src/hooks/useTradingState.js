@@ -53,8 +53,7 @@ export const useTradingState = () => {
 
   const addTradePlan = () => {
     // ✅ UPDATED validation to include strategy
-    if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss && newPlan.quantity && newPlan.strategy) {
-      const plan = {
+if (newPlan.ticker && newPlan.entry && newPlan.target && newPlan.stopLoss && newPlan.quantity) {      const plan = {
         id: Date.now(),
         ...newPlan,
         timestamp: new Date().toISOString(),
