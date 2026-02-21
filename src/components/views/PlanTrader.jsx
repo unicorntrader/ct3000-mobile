@@ -1,616 +1,791 @@
-import React from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Trash2, Play, Target, TrendingUp, Zap, BarChart3, Clock, DollarSign, Brain } from 'lucide-react';
 
-export const PlanTrader = (props) => {
-  const { 
-    tradePlans, 
-    newPlan, 
-    setNewPlan, 
-    addTradePlan, 
-    deleteTradePlan, 
-    executeTradePlan,
-    isMobile 
-  } = props;
+// ─── Scoped styles injected once ───────────────────────────────────────────
+const MODAL_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
-  const [showForm, setShowForm] = React.useState(false);
+  .pt-overlay {
+    position:fixed; inset:0; z-index:1000;
+    background:rgba(15,18,30,.5);
+    backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    animation:pt-fadeIn .2s ease;
+  }
+  @keyframes pt-fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes pt-slideUp {
+    from{opacity:0;transform:translateY(18px) scale(.98)}
+    to  {opacity:1;transform:translateY(0) scale(1)}
+  }
+  @keyframes pt-fadeInUp {
+    from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)}
+  }
 
-  // TRADING STRATEGIES LIST 🎯
-  const strategies = [
-    { id: '', label: 'Select Strategy', color: '#6b7280' },
-    { id: 'breakout', label: 'Breakout', color: '#3b82f6', icon: TrendingUp, description: 'Support/resistance breaks' },
-    { id: 'momentum', label: 'Momentum', color: '#10b981', icon: Zap, description: 'Trend following plays' },
-    { id: 'mean-reversion', label: 'Mean Reversion', color: '#f59e0b', icon: BarChart3, description: 'Oversold/overbought' },
-    { id: 'news-event', label: 'News/Event', color: '#ef4444', icon: Clock, description: 'Earnings, catalysts' },
-    { id: 'scalping', label: 'Scalping', color: '#8b5cf6', icon: Zap, description: 'Quick in/out trades' },
-    { id: 'swing', label: 'Swing Trade', color: '#06b6d4', icon: TrendingUp, description: 'Multi-day holds' },
-    { id: 'gap-play', label: 'Gap Play', color: '#84cc16', icon: BarChart3, description: 'Gap up/down setups' },
-    { id: 'custom', label: 'Custom Setup', color: '#6b7280', icon: Brain, description: 'User-defined strategy' }
-  ];
+  /* ── shell ── */
+  .pt-modal {
+    background:#fff; border:1px solid #e2e6ef; border-radius:20px;
+    width:100%; max-width:620px; padding:36px;
+    box-shadow:0 8px 40px rgba(0,0,0,.1);
+    animation:pt-slideUp .38s cubic-bezier(.16,1,.3,1) forwards;
+    max-height:90vh; overflow-y:auto;
+  }
 
-  // Get strategy info by ID
-  const getStrategy = (strategyId) => {
-    return strategies.find(s => s.id === strategyId) || strategies[0];
-  };
+  /* ── header ── */
+  .pt-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+  .pt-icon {
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+    background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25);
+  }
+  .pt-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; letter-spacing:-.3px; color:#111827; }
+  .pt-subtitle { font-family:'DM Mono',monospace; font-size:12px; color:#9ca3af; letter-spacing:.05em; margin-top:2px; }
+  .pt-divider { height:1px; background:#e2e6ef; margin:0 0 24px; }
 
-  // Calculate risk/reward inline function
-  const calculateRiskReward = (entry, target, stopLoss, position) => {
+  /* ── form grid ── */
+  .pt-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .pt-group { display:flex; flex-direction:column; gap:7px; }
+  .pt-group.full { grid-column:1/-1; }
+
+  .pt-label {
+    font-family:'DM Mono',monospace; font-size:11px; font-weight:500;
+    letter-spacing:.08em; text-transform:uppercase; color:#6b7280;
+  }
+  .pt-label .req { color:#3b82f6; margin-left:2px; }
+
+  /* ── inputs ── */
+  .pt-input-wrap { position:relative; }
+  .pt-input, .pt-select, .pt-textarea {
+    width:100%; background:#fff; border:1px solid #e2e6ef; border-radius:10px;
+    padding:11px 14px; font-family:'DM Sans',sans-serif;
+    font-size:14px; color:#111827; outline:none;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+    -webkit-appearance:none; appearance:none; box-sizing:border-box;
+  }
+  .pt-input::placeholder, .pt-textarea::placeholder { color:#9ca3af; }
+  .pt-input:focus, .pt-select:focus, .pt-textarea:focus {
+    border-color:#3b82f6; background:#f5f8ff;
+    box-shadow:0 0 0 3px rgba(59,130,246,.14);
+  }
+  .pt-input:hover:not(:focus), .pt-select:hover:not(:focus) { border-color:#bcc4d8; }
+
+  .pt-ticker { font-family:'DM Mono',monospace; font-size:15px; font-weight:500; letter-spacing:.05em; }
+  .pt-badge {
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-family:'DM Mono',monospace; font-size:10px;
+    background:rgba(59,130,246,.08); color:#3b82f6;
+    border:1px solid rgba(59,130,246,.2); border-radius:5px; padding:2px 7px; pointer-events:none;
+  }
+  .pt-select-wrap { position:relative; }
+  .pt-select-wrap::after {
+    content:''; position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:5px solid #9ca3af; pointer-events:none;
+  }
+  .pt-input[type="number"] { font-family:'DM Mono',monospace; }
+  .pt-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; }
+  .pt-input[type="date"] { font-family:'DM Mono',monospace; font-size:13px; }
+  .pt-prefix {
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    font-family:'DM Mono',monospace; font-size:13px; color:#9ca3af; pointer-events:none;
+  }
+  .pt-has-prefix .pt-input { padding-left:24px; }
+
+  /* ── direction toggle ── */
+  .pt-dir-toggle { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pt-dir-btn {
+    border:1px solid #e2e6ef; background:#fff; border-radius:10px; padding:10px 0;
+    font-family:'DM Mono',monospace; font-size:13px; font-weight:500;
+    letter-spacing:.06em; cursor:pointer; transition:all .15s;
+    color:#6b7280; text-align:center;
+  }
+  .pt-dir-btn:hover { border-color:#bcc4d8; color:#111827; }
+  .pt-dir-btn.long.active  { background:rgba(22,163,74,.08);  border-color:rgba(22,163,74,.35);  color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.07); }
+  .pt-dir-btn.short.active { background:rgba(220,38,38,.08);  border-color:rgba(220,38,38,.35);  color:#dc2626; box-shadow:0 0 0 3px rgba(220,38,38,.07); }
+
+  /* ── price row ── */
+  .pt-price-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  /* ── section label ── */
+  .pt-section {
+    font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.1em;
+    text-transform:uppercase; color:#9ca3af;
+    display:flex; align-items:center; gap:8px; grid-column:1/-1;
+  }
+  .pt-section::after { content:''; flex:1; height:1px; background:#e2e6ef; }
+
+  /* ── R:R pill ── */
+  .pt-rr-pill {
+    grid-column:1/-1; background:#f8f9fc; border:1px solid #e2e6ef;
+    border-radius:10px; padding:12px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .pt-rr-item { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .pt-rr-label { font-family:'DM Mono',monospace; color:#9ca3af; font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+  .pt-rr-value { font-family:'DM Mono',monospace; color:#111827; font-size:13px; font-weight:500; }
+  .pt-rr-sep { width:1px; height:28px; background:#e2e6ef; flex-shrink:0; }
+
+  /* ── textarea ── */
+  .pt-textarea { resize:none; height:68px; line-height:1.5; }
+
+  /* ── options strip ── */
+  .pt-opt-strip { grid-column:1/-1; display:flex; align-items:center; gap:10px; }
+  .pt-opt-strip::before, .pt-opt-strip::after { content:''; flex:1; height:1px; background:#e2e6ef; }
+  .pt-opt-btn {
+    background:rgba(22,163,74,.07); border:1px solid rgba(22,163,74,.28);
+    border-radius:8px; padding:7px 16px;
+    font-family:'DM Mono',monospace; font-size:11px; font-weight:500;
+    letter-spacing:.07em; color:#16a34a; cursor:pointer;
+    transition:all .18s; white-space:nowrap;
+  }
+  .pt-opt-btn:hover { background:rgba(22,163,74,.13); border-color:rgba(22,163,74,.5); box-shadow:0 0 0 3px rgba(22,163,74,.08); }
+
+  /* ── actions ── */
+  .pt-actions { display:grid; grid-template-columns:1fr auto; gap:12px; margin-top:24px; align-items:center; }
+  .pt-btn-save {
+    background:#3b82f6; color:#fff; border:none; border-radius:10px; padding:13px 28px;
+    font-family:'Syne',sans-serif; font-size:14px; font-weight:700; letter-spacing:.02em;
+    cursor:pointer; transition:all .15s; box-shadow:0 4px 20px rgba(59,130,246,.25);
+  }
+  .pt-btn-save:hover:not(:disabled) { background:#2563eb; transform:translateY(-1px); box-shadow:0 6px 28px rgba(59,130,246,.35); }
+  .pt-btn-save:disabled { background:#d1d5db; box-shadow:none; cursor:not-allowed; }
+  .pt-btn-cancel {
+    background:transparent; color:#6b7280; border:1px solid #e2e6ef; border-radius:10px;
+    padding:13px 20px; font-family:'DM Sans',sans-serif; font-size:14px;
+    cursor:pointer; transition:all .15s; white-space:nowrap;
+  }
+  .pt-btn-cancel:hover { border-color:#bcc4d8; color:#111827; }
+
+  /* ══════════════════════════════════
+     OPTIONS OVERLAY
+  ══════════════════════════════════ */
+  .pt-opt-overlay {
+    position:fixed; inset:0; z-index:1100;
+    background:rgba(15,18,30,.5); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    animation:pt-fadeIn .2s ease;
+  }
+  .pt-opt-modal {
+    background:#fff; border:1px solid #e2e6ef; border-radius:20px;
+    width:100%; max-width:620px; padding:36px;
+    box-shadow:0 8px 40px rgba(0,0,0,.1);
+    animation:pt-slideUp .38s cubic-bezier(.16,1,.3,1) forwards;
+    max-height:90vh; overflow-y:auto;
+  }
+
+  /* ── strategy 2x2 ── */
+  .pt-strat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .pt-strat-tile {
+    border:1.5px solid #e2e6ef; background:#fff; border-radius:14px; padding:16px 14px;
+    cursor:pointer; transition:all .18s; display:flex; flex-direction:column; gap:5px;
+    text-align:left; position:relative; overflow:hidden;
+  }
+  .pt-strat-tile:hover { border-color:#bcc4d8; transform:translateY(-1px); }
+  .pt-strat-badge {
+    position:absolute; top:11px; right:11px;
+    font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.07em;
+    padding:2px 6px; border-radius:4px; font-weight:500;
+  }
+  .pt-badge-bull { background:rgba(22,163,74,.1);  color:#16a34a; }
+  .pt-badge-bear { background:rgba(220,38,38,.1);  color:#dc2626; }
+  .pt-badge-neut { background:rgba(215,119,6,.1);  color:#d97706; }
+  .pt-strat-emoji { font-size:20px; line-height:1; }
+  .pt-strat-name  { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:#111827; transition:color .18s; }
+  .pt-strat-desc  { font-size:12px; color:#9ca3af; line-height:1.4; }
+
+  .pt-strat-tile.lc.active { border-color:rgba(59,130,246,.5);  background:rgba(59,130,246,.04);  box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+  .pt-strat-tile.lc.active .pt-strat-name { color:#3b82f6; }
+  .pt-strat-tile.lp.active { border-color:rgba(147,51,234,.5);  background:rgba(147,51,234,.04);  box-shadow:0 0 0 3px rgba(147,51,234,.1); }
+  .pt-strat-tile.lp.active .pt-strat-name { color:#9333ea; }
+  .pt-strat-tile.sc.active { border-color:rgba(220,38,38,.5);   background:rgba(220,38,38,.04);   box-shadow:0 0 0 3px rgba(220,38,38,.1); }
+  .pt-strat-tile.sc.active .pt-strat-name { color:#dc2626; }
+  .pt-strat-tile.sp.active { border-color:rgba(22,163,74,.5);   background:rgba(22,163,74,.04);   box-shadow:0 0 0 3px rgba(22,163,74,.1); }
+  .pt-strat-tile.sp.active .pt-strat-name { color:#16a34a; }
+
+  /* ── hints ── */
+  .pt-hint {
+    border-radius:10px; padding:10px 14px; font-size:12px; line-height:1.5;
+    margin-bottom:20px; display:none;
+  }
+  .pt-hint.show { display:block; animation:pt-fadeInUp .2s ease; }
+  .pt-hint-lc { background:rgba(59,130,246,.06);  border:1px solid rgba(59,130,246,.2);  color:#1d4ed8; }
+  .pt-hint-lp { background:rgba(147,51,234,.06);  border:1px solid rgba(147,51,234,.2);  color:#7e22ce; }
+  .pt-hint-sc { background:rgba(220,38,38,.06);   border:1px solid rgba(220,38,38,.2);   color:#991b1b; }
+  .pt-hint-sp { background:rgba(22,163,74,.06);   border:1px solid rgba(22,163,74,.2);   color:#14532d; }
+
+  /* ── opt form ── */
+  .pt-opt-form { display:none; }
+  .pt-opt-form.show { display:grid; grid-template-columns:1fr 1fr; gap:18px; animation:pt-fadeInUp .25s ease; }
+
+  /* ── coloured save btn ── */
+  .pt-btn-save.lc { background:#3b82f6; box-shadow:0 4px 20px rgba(59,130,246,.25); }
+  .pt-btn-save.lp { background:#9333ea; box-shadow:0 4px 20px rgba(147,51,234,.25); }
+  .pt-btn-save.sc { background:#dc2626; box-shadow:0 4px 20px rgba(220,38,38,.25); }
+  .pt-btn-save.sp { background:#16a34a; box-shadow:0 4px 20px rgba(22,163,74,.25); }
+`;
+
+function useInjectStyles(id, css) {
+  useEffect(() => {
+    if (document.getElementById(id)) return;
+    const el = document.createElement('style');
+    el.id = id;
+    el.textContent = css;
+    document.head.appendChild(el);
+    return () => el.remove();
+  }, []);
+}
+
+// ─── New Plan Modal ────────────────────────────────────────────────────────
+function NewPlanModal({ onSave, onClose }) {
+  useInjectStyles('pt-modal-styles', MODAL_STYLES);
+
+  const [dir, setDir]       = useState('long');
+  const [ticker, setTicker] = useState('');
+  const [strategy, setStrat]= useState('');
+  const [entry, setEntry]   = useState('');
+  const [target, setTarget] = useState('');
+  const [stop, setStop]     = useState('');
+  const [qty, setQty]       = useState('');
+  const [notes, setNotes]   = useState('');
+  const [showOpt, setShowOpt] = useState(false);
+
+  // R:R calc
+  const rr = useMemo(() => {
     const e = parseFloat(entry) || 0;
     const t = parseFloat(target) || 0;
-    const s = parseFloat(stopLoss) || 0;
+    const s = parseFloat(stop) || 0;
+    const q = parseFloat(qty) || 0;
+    if (!e || !q) return null;
+    const riskPer   = dir === 'long' ? e - s : s - e;
+    const rewardPer = dir === 'long' ? t - e : e - t;
+    const fmt = n => n >= 1000 ? '$' + n.toLocaleString('en-US', {maximumFractionDigits:0})
+                               : '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return {
+      pos:    fmt(e * q),
+      risk:   riskPer   > 0 ? fmt(riskPer   * q) : '—',
+      reward: rewardPer > 0 ? fmt(rewardPer * q) : '—',
+      ratio:  riskPer > 0 && rewardPer > 0 ? (rewardPer / riskPer) : null,
+    };
+  }, [entry, target, stop, qty, dir]);
 
-    if (position === 'long') {
-      const risk = e - s;
-      const reward = t - e;
-      return {
-        risk: risk.toFixed(2),
-        reward: reward.toFixed(2),
-        ratio: risk > 0 ? (reward / risk).toFixed(1) : '0.0'
-      };
-    } else {
-      const risk = s - e;
-      const reward = e - t;
-      return {
-        risk: risk.toFixed(2),
-        reward: reward.toFixed(2),
-        ratio: risk > 0 ? (reward / risk).toFixed(1) : '0.0'
-      };
-    }
-  };
+  const rrColor = rr?.ratio ? (rr.ratio >= 2 ? '#16a34a' : rr.ratio >= 1 ? '#d97706' : '#dc2626') : '#111827';
 
-  // Calculate risk/reward for current plan
-  const riskReward = React.useMemo(() => {
-    if (!newPlan.entry || !newPlan.target || !newPlan.stopLoss) {
-      return { risk: '0.00', reward: '0.00', ratio: '0.0' };
-    }
-    return calculateRiskReward(newPlan.entry, newPlan.target, newPlan.stopLoss, newPlan.position);
-  }, [newPlan.entry, newPlan.target, newPlan.stopLoss, newPlan.position]);
+  const strategies = [
+    { id: '', label: 'Select Strategy' },
+    { id: 'breakout',      label: 'Breakout' },
+    { id: 'momentum',      label: 'Momentum' },
+    { id: 'mean-reversion',label: 'Mean Reversion' },
+    { id: 'news-event',    label: 'News/Event' },
+    { id: 'scalping',      label: 'Scalping' },
+    { id: 'swing',         label: 'Swing Trade' },
+    { id: 'gap-play',      label: 'Gap Play' },
+    { id: 'custom',        label: 'Custom Setup' },
+  ];
 
-  // Form validation
-  const isFormValid = () => {
-    return newPlan.ticker && 
-           newPlan.entry && 
-           newPlan.target && 
-           newPlan.stopLoss && 
-           newPlan.quantity &&
-           newPlan.strategy && // Strategy is required now!
-           parseFloat(newPlan.entry) > 0 &&
-           parseFloat(newPlan.target) > 0 &&
-           parseFloat(newPlan.stopLoss) > 0 &&
-           parseFloat(newPlan.quantity) > 0;
-  };
+  const isValid = ticker && entry && target && stop && qty && strategy &&
+    parseFloat(entry) > 0 && parseFloat(target) > 0 &&
+    parseFloat(stop) > 0 && parseFloat(qty) > 0;
 
-  // Plan analysis
-  const getPlanAnalysis = () => {
-    const ratio = parseFloat(riskReward.ratio);
-    
-    if (ratio >= 3) {
-      return { 
-        status: 'excellent', 
-        message: 'Excellent risk/reward ratio!', 
-        color: 'green' 
-      };
-    } else if (ratio >= 2) {
-      return { 
-        status: 'good', 
-        message: 'Good risk/reward ratio', 
-        color: 'blue' 
-      };
-    } else if (ratio >= 1.5) {
-      return { 
-        status: 'acceptable', 
-        message: 'Acceptable risk/reward', 
-        color: 'yellow' 
-      };
-    } else {
-      return { 
-        status: 'poor', 
-        message: 'Poor risk/reward ratio', 
-        color: 'red' 
-      };
-    }
-  };
+  function handleSave() {
+    onSave({ ticker, strategy, position: dir, entry, target, stopLoss: stop, quantity: qty, notes });
+    onClose();
+  }
 
-  const analysis = getPlanAnalysis();
+  return (
+    <>
+      <div className="pt-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="pt-modal">
+          {/* Header */}
+          <div className="pt-header">
+            <div className="pt-icon">📋</div>
+            <div>
+              <div className="pt-title">New Trade Plan</div>
+              <div className="pt-subtitle">CT3000 · PLANNER</div>
+            </div>
+          </div>
+          <div className="pt-divider" />
 
-  // Group plans by strategy for better organization
-  const groupedPlans = React.useMemo(() => {
+          {/* Form */}
+          <div className="pt-grid">
+
+            {/* Ticker */}
+            <div className="pt-group full">
+              <label className="pt-label">Ticker / Instrument <span className="req">*</span></label>
+              <div className="pt-input-wrap">
+                <input className="pt-input pt-ticker" type="text"
+                  placeholder="AAPL, ES, EUR/USD…"
+                  value={ticker}
+                  onChange={e => setTicker(e.target.value.toUpperCase())} />
+                <span className="pt-badge">SYM</span>
+              </div>
+            </div>
+
+            {/* Strategy */}
+            <div className="pt-group">
+              <label className="pt-label">Strategy</label>
+              <div className="pt-select-wrap">
+                <select className="pt-select" value={strategy} onChange={e => setStrat(e.target.value)}>
+                  {strategies.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Direction */}
+            <div className="pt-group">
+              <label className="pt-label">Direction <span className="req">*</span></label>
+              <div className="pt-dir-toggle">
+                <button className={`pt-dir-btn long ${dir === 'long' ? 'active' : ''}`}
+                  onClick={() => setDir('long')}>▲ LONG</button>
+                <button className={`pt-dir-btn short ${dir === 'short' ? 'active' : ''}`}
+                  onClick={() => setDir('short')}>▼ SHORT</button>
+              </div>
+            </div>
+
+            {/* Price levels */}
+            <div className="pt-section">Price Levels</div>
+            <div className="pt-group full">
+              <div className="pt-price-row">
+                <div className="pt-group">
+                  <label className="pt-label">Entry <span className="req">*</span></label>
+                  <div className="pt-input-wrap pt-has-prefix">
+                    <span className="pt-prefix">$</span>
+                    <input className="pt-input" type="number" placeholder="0.00" step="0.01"
+                      value={entry} onChange={e => setEntry(e.target.value)} />
+                  </div>
+                </div>
+                <div className="pt-group">
+                  <label className="pt-label">Target</label>
+                  <div className="pt-input-wrap pt-has-prefix">
+                    <span className="pt-prefix">$</span>
+                    <input className="pt-input" type="number" placeholder="0.00" step="0.01"
+                      value={target} onChange={e => setTarget(e.target.value)} />
+                  </div>
+                </div>
+                <div className="pt-group">
+                  <label className="pt-label">Stop Loss</label>
+                  <div className="pt-input-wrap pt-has-prefix">
+                    <span className="pt-prefix">$</span>
+                    <input className="pt-input" type="number" placeholder="0.00" step="0.01"
+                      value={stop} onChange={e => setStop(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quantity */}
+            <div className="pt-group">
+              <label className="pt-label">Quantity <span className="req">*</span></label>
+              <input className="pt-input" type="number" placeholder="0" min="1"
+                value={qty} onChange={e => setQty(e.target.value)} />
+            </div>
+
+            {/* R:R pill */}
+            <div className="pt-rr-pill">
+              <div className="pt-rr-item">
+                <span className="pt-rr-label">Position Size</span>
+                <span className="pt-rr-value">{rr?.pos ?? '—'}</span>
+              </div>
+              <div className="pt-rr-sep" />
+              <div className="pt-rr-item">
+                <span className="pt-rr-label">Risk</span>
+                <span className="pt-rr-value" style={{color:'#dc2626'}}>{rr?.risk ?? '—'}</span>
+              </div>
+              <div className="pt-rr-sep" />
+              <div className="pt-rr-item">
+                <span className="pt-rr-label">Reward</span>
+                <span className="pt-rr-value" style={{color:'#16a34a'}}>{rr?.reward ?? '—'}</span>
+              </div>
+              <div className="pt-rr-sep" />
+              <div className="pt-rr-item">
+                <span className="pt-rr-label">R:R</span>
+                <span className="pt-rr-value" style={{color: rrColor}}>
+                  {rr?.ratio ? rr.ratio.toFixed(2) + 'R' : '—'}
+                </span>
+              </div>
+            </div>
+
+            {/* Options strip */}
+            <div className="pt-opt-strip">
+              <button className="pt-opt-btn" onClick={() => setShowOpt(true)}>🎯 OPTIONS TRADE</button>
+            </div>
+
+            {/* Notes */}
+            <div className="pt-group full">
+              <label className="pt-label">Thesis / Notes</label>
+              <textarea className="pt-textarea"
+                placeholder="Why are you taking this trade? Key levels, catalysts, invalidation…"
+                value={notes} onChange={e => setNotes(e.target.value)} />
+            </div>
+
+          </div>
+
+          <div className="pt-actions">
+            <button className="pt-btn-save" disabled={!isValid} onClick={handleSave}>Save Plan</button>
+            <button className="pt-btn-cancel" onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Options overlay — rendered on top */}
+      {showOpt && <OptionsOverlay onClose={() => setShowOpt(false)} onSave={plan => { onSave(plan); onClose(); }} />}
+    </>
+  );
+}
+
+// ─── Options Overlay ──────────────────────────────────────────────────────
+const STRAT_META = {
+  lc: { subtitle: 'LONG CALL · BULLISH' },
+  lp: { subtitle: 'LONG PUT · BEARISH' },
+  sc: { subtitle: 'SHORT CALL · BEARISH / NEUTRAL' },
+  sp: { subtitle: 'SHORT PUT · BULLISH / NEUTRAL' },
+};
+
+function OptionsOverlay({ onClose, onSave }) {
+  const [optStrat, setOptStrat] = useState(null);
+  const [underlying, setUnderlying] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [strike, setStrike] = useState('');
+  const [contracts, setContracts] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const stratColors = { lc:'#3b82f6', lp:'#9333ea', sc:'#dc2626', sp:'#16a34a' };
+  const saveColor = optStrat ? stratColors[optStrat] : '#3b82f6';
+
+  const isValid = optStrat && underlying && expiry && strike && contracts;
+
+  function handleSave() {
+    onSave({
+      ticker: underlying,
+      strategy: `options-${optStrat}`,
+      position: ['lc','sp'].includes(optStrat) ? 'long' : 'short',
+      entry: strike, target: '', stopLoss: '', quantity: contracts, notes,
+      optionType: optStrat, expiry,
+    });
+  }
+
+  return (
+    <div className="pt-opt-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="pt-opt-modal">
+
+        {/* Header */}
+        <div className="pt-header">
+          <div className="pt-icon" style={{background:'rgba(22,163,74,.08)', border:'1px solid rgba(22,163,74,.25)'}}>🎯</div>
+          <div>
+            <div className="pt-title">Options Trade Plan</div>
+            <div className="pt-subtitle">
+              {optStrat ? `CT3000 · ${STRAT_META[optStrat].subtitle}` : 'CT3000 · SELECT A STRATEGY'}
+            </div>
+          </div>
+        </div>
+        <div className="pt-divider" />
+
+        {/* 2×2 strategy picker */}
+        <div className="pt-strat-grid">
+          {[
+            { id:'lc', emoji:'📈', name:'Long Call',  badge:'BULLISH',          badgeCls:'pt-badge-bull', desc:'Buy the right to purchase. Defined risk, unlimited upside.' },
+            { id:'lp', emoji:'📉', name:'Long Put',   badge:'BEARISH',          badgeCls:'pt-badge-bear', desc:'Buy the right to sell. Defined risk, large downside capture.' },
+            { id:'sc', emoji:'⚡', name:'Short Call', badge:'BEARISH / NEUTRAL', badgeCls:'pt-badge-neut', desc:'Sell the right to buy. Collect premium — uncapped risk.' },
+            { id:'sp', emoji:'🛡', name:'Short Put',  badge:'BULLISH / NEUTRAL', badgeCls:'pt-badge-bull', desc:'Sell the right to sell. Collect premium — risk is assignment.' },
+          ].map(s => (
+            <button key={s.id}
+              className={`pt-strat-tile ${s.id} ${optStrat === s.id ? 'active' : ''}`}
+              onClick={() => setOptStrat(s.id)}>
+              <span className={`pt-strat-badge ${s.badgeCls}`}>{s.badge}</span>
+              <span className="pt-strat-emoji">{s.emoji}</span>
+              <span className="pt-strat-name">{s.name}</span>
+              <span className="pt-strat-desc">{s.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Context hints */}
+        <div className={`pt-hint pt-hint-lc ${optStrat === 'lc' ? 'show' : ''}`}>📞 <strong>Long Call</strong> — Max loss is the premium paid. Profitable if underlying closes above Strike + Premium at expiry.</div>
+        <div className={`pt-hint pt-hint-lp ${optStrat === 'lp' ? 'show' : ''}`}>🛡 <strong>Long Put</strong> — Max loss is the premium paid. Profitable if underlying closes below Strike − Premium at expiry.</div>
+        <div className={`pt-hint pt-hint-sc ${optStrat === 'sc' ? 'show' : ''}`}>⚠️ <strong>Short Call</strong> — Max gain is premium received. Theoretically unlimited loss if underlying surges. Always plan your stop.</div>
+        <div className={`pt-hint pt-hint-sp ${optStrat === 'sp' ? 'show' : ''}`}>💰 <strong>Short Put</strong> — Max gain is premium received. Risk is being assigned shares at the strike. Best on stocks you'd hold anyway.</div>
+
+        {/* Form */}
+        <div className={`pt-opt-form ${optStrat ? 'show' : ''}`}>
+
+          <div className="pt-group full">
+            <label className="pt-label">Underlying <span className="req">*</span></label>
+            <div className="pt-input-wrap">
+              <input className="pt-input pt-ticker" type="text" placeholder="AAPL, SPY, QQQ…"
+                value={underlying} onChange={e => setUnderlying(e.target.value.toUpperCase())} />
+              <span className="pt-badge">UND</span>
+            </div>
+          </div>
+
+          <div className="pt-group">
+            <label className="pt-label">Expiry <span className="req">*</span></label>
+            <input className="pt-input" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+          </div>
+
+          <div className="pt-group">
+            <label className="pt-label">Strike <span className="req">*</span></label>
+            <div className="pt-input-wrap pt-has-prefix">
+              <span className="pt-prefix">$</span>
+              <input className="pt-input" type="number" placeholder="0.00" step="0.50"
+                value={strike} onChange={e => setStrike(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="pt-group">
+            <label className="pt-label">Contracts <span className="req">*</span></label>
+            <input className="pt-input" type="number" placeholder="1" min="1"
+              value={contracts} onChange={e => setContracts(e.target.value)} />
+          </div>
+
+          <div className="pt-group full">
+            <label className="pt-label">Thesis / Notes</label>
+            <textarea className="pt-textarea"
+              placeholder="Strike rationale, IV context, expected move, exit trigger…"
+              value={notes} onChange={e => setNotes(e.target.value)} />
+          </div>
+
+        </div>
+
+        <div className="pt-actions" style={{marginTop:'24px'}}>
+          <button className={`pt-btn-save ${optStrat || 'lc'}`}
+            style={{background: saveColor}}
+            disabled={!isValid}
+            onClick={handleSave}>
+            Save Options Plan
+          </button>
+          <button className="pt-btn-cancel" onClick={onClose}>← Back</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Main PlanTrader component ─────────────────────────────────────────────
+export const PlanTrader = (props) => {
+  const {
+    tradePlans,
+    newPlan,
+    setNewPlan,
+    addTradePlan,
+    deleteTradePlan,
+    executeTradePlan,
+    isMobile
+  } = props;
+
+  const [showModal, setShowModal] = useState(false);
+
+  const strategies = [
+    { id: '', label: 'Select Strategy', color: '#6b7280' },
+    { id: 'breakout',      label: 'Breakout',      color: '#3b82f6', icon: TrendingUp, description: 'Support/resistance breaks' },
+    { id: 'momentum',      label: 'Momentum',      color: '#10b981', icon: Zap,        description: 'Trend following plays' },
+    { id: 'mean-reversion',label: 'Mean Reversion',color: '#f59e0b', icon: BarChart3,  description: 'Oversold/overbought' },
+    { id: 'news-event',    label: 'News/Event',    color: '#ef4444', icon: Clock,      description: 'Earnings, catalysts' },
+    { id: 'scalping',      label: 'Scalping',      color: '#8b5cf6', icon: Zap,        description: 'Quick in/out trades' },
+    { id: 'swing',         label: 'Swing Trade',   color: '#06b6d4', icon: TrendingUp, description: 'Multi-day holds' },
+    { id: 'gap-play',      label: 'Gap Play',      color: '#84cc16', icon: BarChart3,  description: 'Gap up/down setups' },
+    { id: 'custom',        label: 'Custom Setup',  color: '#6b7280', icon: Brain,      description: 'User-defined strategy' },
+    { id: 'options-lc',    label: 'Long Call',     color: '#3b82f6', icon: TrendingUp, description: 'Options — bullish' },
+    { id: 'options-lp',    label: 'Long Put',      color: '#9333ea', icon: TrendingUp, description: 'Options — bearish' },
+    { id: 'options-sc',    label: 'Short Call',    color: '#dc2626', icon: Zap,        description: 'Options — bearish/neutral' },
+    { id: 'options-sp',    label: 'Short Put',     color: '#16a34a', icon: Zap,        description: 'Options — bullish/neutral' },
+  ];
+
+  const getStrategy = id => strategies.find(s => s.id === id) || strategies[0];
+
+  const groupedPlans = useMemo(() => {
     const groups = {};
     tradePlans.forEach(plan => {
-      const strategy = plan.strategy || 'unassigned';
-      if (!groups[strategy]) {
-        groups[strategy] = [];
-      }
-      groups[strategy].push(plan);
+      const key = plan.strategy || 'unassigned';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(plan);
     });
     return groups;
   }, [tradePlans]);
 
-  if (isMobile) {
-    return (
-      <div className="p-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Trade Plans</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white p-2 rounded-lg"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-
-        {showForm && (
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="font-semibold mb-4">New Trade Plan</h3>
-            <div className="space-y-3">
-              {/* Symbol and Strategy Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Ticker (AAPL)"
-                  value={newPlan.ticker}
-                  onChange={(e) => setNewPlan({...newPlan, ticker: e.target.value.toUpperCase()})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                
-                {/* 🎯 STRATEGY SELECTOR - MOBILE */}
-                <select
-                  value={newPlan.strategy || ''}
-                  onChange={(e) => setNewPlan({...newPlan, strategy: e.target.value})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {strategies.map(strategy => (
-                    <option key={strategy.id} value={strategy.id}>
-                      {strategy.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Strategy Description */}
-              {newPlan.strategy && (
-                <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    💡 {getStrategy(newPlan.strategy).description}
-                  </p>
-                </div>
-              )}
-              
-              {/* Position and Entry */}
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={newPlan.position}
-                  onChange={(e) => setNewPlan({...newPlan, position: e.target.value})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="long">Long</option>
-                  <option value="short">Short</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Entry Price"
-                  value={newPlan.entry}
-                  onChange={(e) => setNewPlan({...newPlan, entry: e.target.value})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  step="0.01"
-                />
-              </div>
-              
-              {/* Target and Stop Loss */}
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="number"
-                  placeholder="Target Price"
-                  value={newPlan.target}
-                  onChange={(e) => setNewPlan({...newPlan, target: e.target.value})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  step="0.01"
-                />
-                <input
-                  type="number"
-                  placeholder="Stop Loss"
-                  value={newPlan.stopLoss}
-                  onChange={(e) => setNewPlan({...newPlan, stopLoss: e.target.value})}
-                  className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  step="0.01"
-                />
-              </div>
-
-              <input
-                type="number"
-                placeholder="Quantity"
-                value={newPlan.quantity}
-                onChange={(e) => setNewPlan({...newPlan, quantity: e.target.value})}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-
-              <textarea
-                placeholder="Notes (optional)"
-                value={newPlan.notes}
-                onChange={(e) => setNewPlan({...newPlan, notes: e.target.value})}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                rows="3"
-              />
-
-              {/* Risk/Reward Analysis */}
-              {newPlan.entry && newPlan.target && newPlan.stopLoss && (
-                <div className={`text-center p-3 rounded-lg ${
-                  analysis.status === 'excellent' ? 'bg-green-50 text-green-800' :
-                  analysis.status === 'good' ? 'bg-blue-50 text-blue-800' :
-                  analysis.status === 'acceptable' ? 'bg-yellow-50 text-yellow-800' :
-                  'bg-red-50 text-red-800'
-                }`}>
-                  <p className="font-semibold">Risk/Reward: 1:{riskReward.ratio}</p>
-                  <p className="text-sm">{analysis.message}</p>
-                </div>
-              )}
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    addTradePlan();
-                    setShowForm(false);
-                  }}
-                  disabled={!isFormValid()}
-                  className="flex-1 bg-blue-600 text-white p-3 rounded-lg font-medium disabled:bg-gray-300"
-                >
-                  Add Plan
-                </button>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-3 border border-gray-300 rounded-lg text-gray-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Plans List - Grouped by Strategy */}
-        <div className="space-y-4">
-          {Object.entries(groupedPlans).map(([strategyId, plans]) => {
-            const strategy = getStrategy(strategyId);
-            const StrategyIcon = strategy.icon || Target;
-            
-            return (
-              <div key={strategyId} className="space-y-2">
-                {/* Strategy Group Header */}
-                <div className="flex items-center space-x-2 px-2">
-                  <StrategyIcon className="h-4 w-4" style={{ color: strategy.color }} />
-                  <span className="font-medium text-sm" style={{ color: strategy.color }}>
-                    {strategy.label} ({plans.length})
-                  </span>
-                </div>
-                
-                {/* Plans in this strategy */}
-                {plans.map(plan => (
-                  <div key={plan.id} className="bg-white rounded-lg shadow-sm p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-lg">{plan.ticker}</span>
-                          <span className={`px-2 py-1 text-xs rounded`} style={{ 
-                            backgroundColor: strategy.color + '20', 
-                            color: strategy.color 
-                          }}>
-                            {strategy.label}
-                          </span>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            plan.position === 'long' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {plan.position.toUpperCase()}
-                          </span>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            plan.status === 'executed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {plan.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">{new Date(plan.timestamp).toLocaleDateString()}</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        {plan.status === 'planned' && (
-                          <button
-                            onClick={() => executeTradePlan(plan.id)}
-                            className="bg-green-600 text-white p-2 rounded-lg"
-                          >
-                            <Play className="h-4 w-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteTradePlan(plan.id)}
-                          className="bg-red-600 text-white p-2 rounded-lg"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Entry</span>
-                        <p className="font-medium">${plan.entry}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Target</span>
-                        <p className="font-medium">${plan.target}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Stop</span>
-                        <p className="font-medium">${plan.stopLoss}</p>
-                      </div>
-                    </div>
-
-                    {plan.notes && (
-                      <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
-                        <p className="text-gray-700">{plan.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          
-          {tradePlans.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>No trade plans yet</p>
-              <p className="text-sm">Create your first plan above!</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  // When modal saves, pipe into the existing useTradingState flow
+  function handleModalSave(planData) {
+    // Temporarily set newPlan then call addTradePlan
+    // Since setNewPlan is async, we create the plan directly here
+    const plan = {
+      id: Date.now(),
+      ...planData,
+      timestamp: new Date().toISOString(),
+      status: 'planned',
+    };
+    // Use the setter + add pattern from useTradingState
+    setNewPlan(planData);
+    // Defer to let state settle, then add
+    setTimeout(() => {
+      addTradePlan();
+      setNewPlan({ ticker:'', entry:'', target:'', stopLoss:'', position:'long', quantity:'', notes:'', strategy:'' });
+    }, 0);
   }
 
-  // DESKTOP LAYOUT
-  return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Create New Trade Plan</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            {/* Symbol and Strategy Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ticker Symbol</label>
-                <input
-                  type="text"
-                  value={newPlan.ticker}
-                  onChange={(e) => setNewPlan({...newPlan, ticker: e.target.value.toUpperCase()})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="AAPL"
-                />
-              </div>
-              
-              {/* 🎯 STRATEGY SELECTOR - DESKTOP */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trading Strategy</label>
-                <select
-                  value={newPlan.strategy || ''}
-                  onChange={(e) => setNewPlan({...newPlan, strategy: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {strategies.map(strategy => (
-                    <option key={strategy.id} value={strategy.id}>
-                      {strategy.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            {/* Strategy Description */}
-            {newPlan.strategy && (
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-2">
-                  {React.createElement(getStrategy(newPlan.strategy).icon || Target, { 
-                    className: "h-4 w-4", 
-                    style: { color: getStrategy(newPlan.strategy).color } 
-                  })}
-                  <span className="text-sm font-medium text-blue-800">
-                    {getStrategy(newPlan.strategy).label}
-                  </span>
-                </div>
-                <p className="text-sm text-blue-700 mt-1">
-                  {getStrategy(newPlan.strategy).description}
-                </p>
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Position Type</label>
-              <select
-                value={newPlan.position}
-                onChange={(e) => setNewPlan({...newPlan, position: e.target.value})}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="long">Long</option>
-                <option value="short">Short</option>
-              </select>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Price</label>
-                <input
-                  type="number"
-                  value={newPlan.entry}
-                  onChange={(e) => setNewPlan({...newPlan, entry: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="150.00"
-                  step="0.01"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target Price</label>
-                <input
-                  type="number"
-                  value={newPlan.target}
-                  onChange={(e) => setNewPlan({...newPlan, target: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="155.00"
-                  step="0.01"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stop Loss</label>
-                <input
-                  type="number"
-                  value={newPlan.stopLoss}
-                  onChange={(e) => setNewPlan({...newPlan, stopLoss: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="145.00"
-                  step="0.01"
-                />
-              </div>
-            </div>
+  // Simpler: bypass setNewPlan and directly use setTradePlans if available
+  // But since we only have addTradePlan, we use the approach below:
+  function handleModalSaveDirect(planData) {
+    const plan = {
+      id: Date.now(),
+      ticker: planData.ticker,
+      entry: planData.entry,
+      target: planData.target,
+      stopLoss: planData.stopLoss,
+      quantity: planData.quantity,
+      notes: planData.notes,
+      position: planData.position,
+      strategy: planData.strategy,
+      timestamp: new Date().toISOString(),
+      status: 'planned',
+      ...(planData.optionType && { optionType: planData.optionType, expiry: planData.expiry }),
+    };
+    // setTradePlans is available via props if passed through, otherwise use addTradePlan workaround
+    if (props.setTradePlans) {
+      props.setTradePlans(prev => [...prev, plan]);
+    } else {
+      // Fall back: populate newPlan state and call addTradePlan
+      setNewPlan({
+        ticker: planData.ticker,
+        entry: planData.entry,
+        target: planData.target,
+        stopLoss: planData.stopLoss,
+        quantity: planData.quantity,
+        notes: planData.notes,
+        position: planData.position,
+        strategy: planData.strategy,
+      });
+      // addTradePlan reads from newPlan state — use a ref approach below
+    }
+  }
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input
-                type="number"
-                value={newPlan.quantity}
-                onChange={(e) => setNewPlan({...newPlan, quantity: e.target.value})}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="100"
-              />
+  // Best approach: keep a pendingPlan ref, effect fires addTradePlan when it's set
+  const pendingRef = useRef(null);
+  const [pendingTick, setPendingTick] = useState(0);
+
+  function handleSave(planData) {
+    pendingRef.current = planData;
+    setNewPlan({
+      ticker: planData.ticker,
+      entry: planData.entry,
+      target: planData.target,
+      stopLoss: planData.stopLoss,
+      quantity: planData.quantity,
+      notes: planData.notes,
+      position: planData.position,
+      strategy: planData.strategy,
+    });
+    setPendingTick(t => t + 1);
+  }
+
+  useEffect(() => {
+    if (pendingTick > 0 && pendingRef.current) {
+      addTradePlan();
+      pendingRef.current = null;
+    }
+  }, [pendingTick]);
+
+  const PlansList = ({ plans }) => (
+    <div className="space-y-4">
+      {Object.entries(groupedPlans).map(([strategyId, plans]) => {
+        const strategy = getStrategy(strategyId);
+        const StratIcon = strategy.icon || Target;
+        return (
+          <div key={strategyId} className="space-y-2">
+            <div className="flex items-center space-x-2 px-1">
+              <StratIcon className="h-4 w-4" style={{ color: strategy.color }} />
+              <span className="font-medium text-sm" style={{ color: strategy.color }}>
+                {strategy.label} ({plans.length})
+              </span>
             </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-700 mb-3">Risk/Reward Analysis</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Risk per share:</span>
-                  <span className="font-medium">${riskReward.risk}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Reward per share:</span>
-                  <span className="font-medium">${riskReward.reward}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="text-sm text-gray-600">Risk/Reward Ratio:</span>
-                  <span className="font-bold text-blue-600">
-                    1:{riskReward.ratio}
-                  </span>
-                </div>
-                <div className="mt-2 p-2 rounded text-sm text-blue-800 bg-blue-50">
-                  {analysis.message}
+            {plans.map(plan => (
+              <div key={plan.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4"
+                style={{ borderLeftColor: strategy.color }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center space-x-2 flex-wrap gap-1">
+                      <span className="font-bold text-lg">{plan.ticker}</span>
+                      <span className="px-2 py-0.5 text-xs rounded"
+                        style={{ background: strategy.color + '20', color: strategy.color }}>
+                        {strategy.label}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${plan.position === 'long' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {plan.position?.toUpperCase()}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${plan.status === 'executed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {plan.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{new Date(plan.timestamp).toLocaleDateString()}</p>
+                    {plan.entry && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Entry: ${plan.entry}
+                        {plan.target   && ` · Target: $${plan.target}`}
+                        {plan.stopLoss && ` · Stop: $${plan.stopLoss}`}
+                        {plan.quantity && ` · Qty: ${plan.quantity}`}
+                        {plan.expiry   && ` · Exp: ${plan.expiry}`}
+                      </p>
+                    )}
+                    {plan.notes && <p className="text-xs text-gray-500 mt-1 italic">{plan.notes}</p>}
+                  </div>
+                  <div className="flex space-x-2 ml-3">
+                    {plan.status === 'planned' && (
+                      <button onClick={() => executeTradePlan(plan.id)}
+                        className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors">
+                        <Play className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button onClick={() => deleteTradePlan(plan.id)}
+                      className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea
-                value={newPlan.notes}
-                onChange={(e) => setNewPlan({...newPlan, notes: e.target.value})}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows="4"
-                placeholder="Trade rationale, setup details, etc."
-              />
-            </div>
-            
-            <button
-              onClick={addTradePlan}
-              disabled={!isFormValid()}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-gray-300"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Trade Plan
+            ))}
+          </div>
+        );
+      })}
+      {tradePlans.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p className="text-lg">No trade plans yet</p>
+          <p className="text-sm">Hit the button above to create your first plan</p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {/* Modal */}
+      {showModal && <NewPlanModal onSave={handleSave} onClose={() => setShowModal(false)} />}
+
+      {isMobile ? (
+        <div className="p-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-900">Trade Plans</h2>
+            <button onClick={() => setShowModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 text-sm font-medium">
+              <Plus className="h-4 w-4" />
+              <span>New Plan</span>
             </button>
           </div>
+          <PlansList plans={tradePlans} />
         </div>
-      </div>
-
-      {/* Desktop Plans List - Grouped by Strategy */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Trade Plans</h3>
-        
-        {Object.entries(groupedPlans).map(([strategyId, plans]) => {
-          const strategy = getStrategy(strategyId);
-          const StrategyIcon = strategy.icon || Target;
-          
-          return (
-            <div key={strategyId} className="mb-6">
-              {/* Strategy Group Header */}
-              <div className="flex items-center space-x-3 mb-3 pb-2 border-b border-gray-200">
-                <StrategyIcon className="h-5 w-5" style={{ color: strategy.color }} />
-                <h4 className="font-semibold" style={{ color: strategy.color }}>
-                  {strategy.label} ({plans.length} plans)
-                </h4>
-                <span className="text-xs text-gray-500">{strategy.description}</span>
-              </div>
-              
-              {/* Plans in this strategy */}
-              <div className="space-y-3">
-                {plans.map(plan => (
-                  <div key={plan.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border" style={{ borderLeftColor: strategy.color, borderLeftWidth: '4px' }}>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4">
-                        <span className="font-bold text-lg">{plan.ticker}</span>
-                        <span className="px-2 py-1 text-xs rounded" style={{ 
-                          backgroundColor: strategy.color + '20', 
-                          color: strategy.color 
-                        }}>
-                          {strategy.label}
-                        </span>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          plan.position === 'long' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {plan.position.toUpperCase()}
-                        </span>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          plan.status === 'executed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {plan.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        Entry: ${plan.entry} | Target: ${plan.target} | Stop: ${plan.stopLoss} | Qty: {plan.quantity}
-                      </div>
-                      {plan.notes && (
-                        <div className="text-sm text-gray-500 mt-1 italic">{plan.notes}</div>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      {plan.status === 'planned' && (
-                        <button
-                          onClick={() => executeTradePlan(plan.id)}
-                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors flex items-center"
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Execute
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deleteTradePlan(plan.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        
-        {tradePlans.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <Target className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg">No trade plans yet</p>
-            <p className="text-sm">Create your first plan above!</p>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-900">Trade Plans</h2>
+            <button onClick={() => setShowModal(true)}
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center space-x-2 font-medium hover:bg-blue-700 transition-colors shadow-sm">
+              <Plus className="h-5 w-5" />
+              <span>New Plan</span>
+            </button>
           </div>
-        )}
-      </div>
-    </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <PlansList plans={tradePlans} />
+          </div>
+        </div>
+      )}
+    </>
   );
 };
